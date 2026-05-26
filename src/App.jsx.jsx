@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from './supabase.js';
 
 // ═══════════════════════════════════════════════════════════
 // PALETTE
@@ -534,9 +535,20 @@ function LibreTab({p,PAL,Card,CH,ST,Toggle,INP}){
   function fmt(s){const m=Math.floor(s/60);const sec=s%60;return`${m}:${sec.toString().padStart(2,"0")}`;}
   function vitesse(){if(!distance||!temps||temps===0)return null;const d=parseFloat(distance);const h=temps/3600;if(act?.id==="natation")return null;return(d/h).toFixed(1);}
   function calories(){if(!temps)return 0;const met=act?.id==="velo"?8:act?.id==="natation"?7:act?.id==="marche"?4:9;const poids=parseInt(p.parentPoids)||75;return Math.round(met*poids*(temps/3600));}
-  function publier(){
-    const newPost={id:Date.now(),auteur:`${p.parentPrenom||"Vous"} & ${p.enfantPrenom||"Votre enfant"}`,avatar:p.relation?.includes("mere")?"👩‍👦":"👨‍👦",activite,icon:act?.icon,desc:`${distance||"—"} ${act?.unit} en ${fmt(temps)}`,details:vitesse()?`${vitesse()} km/h · ${calories()} kcal`:`${calories()} kcal`,lieu:lieu||"Votre ville",photo:"🌳",temps:"À l'instant",likes:0,comments:[],note};
-    setHistorique(prev=>[newPost,...prev]);
+  async function publier(){
+    const newPost={
+      auteur:`${p.parentPrenom||"Vous"} & ${p.enfantPrenom||"Votre enfant"}`,
+      avatar:p.relation?.includes("mere")?"👩‍👦":"👨‍👦",
+      activite,icon:act?.icon,
+      desc:`${distance||"—"} ${act?.unit} en ${fmt(temps)}`,
+      details:vitesse()?`${vitesse()} km/h · ${calories()} kcal`:`${calories()} kcal`,
+      lieu:lieu||"Votre ville",photo:"🌳",
+      likes:0,note
+    };
+    try {
+      await supabase.from("duosport_posts").insert(newPost);
+    } catch(e){}
+    setHistorique(prev=>[{...newPost,id:Date.now(),temps:"À l'instant"},...prev]);
     setPhase("bravo");setDistance("");setNote("");setLieu("");
   }
 
@@ -631,22 +643,117 @@ function LibreTab({p,PAL,Card,CH,ST,Toggle,INP}){
 // ═══════════════════════════════════════════════════════════
 // ONGLET COMMUNAUTÉ
 // ═══════════════════════════════════════════════════════════
+function PostCard({post,p,PAL,onLike,isLiked,onComment,commentaire,setCommentaire}){
+  const [showCom,setShowCom]=useState(false);
+  const [localComments,setLocalComments]=useState([]);
+  const actData=ACTIVITES.find(a=>a.id===post.activite);
+  const tempsAffiche=post.created_at?new Date(post.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+
+  async function chargerComments(){
+    try{
+      const {data}=await supabase.from("duosport_comments").select("*").eq("post_id",String(post.id)).order("created_at",{ascending:true});
+      if(data) setLocalComments(data);
+    }catch(e){}
+  }
+
+  async function envoyerComment(){
+    const txt=commentaire[post.id];
+    if(!txt||!txt.trim())return;
+    const auteur=`${p.parentPrenom||"Vous"} & ${p.enfantPrenom||"Enfant"}`;
+    try{
+      await supabase.from("duosport_comments").insert({post_id:String(post.id),auteur,txt});
+      setCommentaire(prev=>({...prev,[post.id]:""}));
+      chargerComments();
+    }catch(e){}
+  }
+
+  return(<div style={{background:PAL.navyL,border:`1.5px solid ${PAL.navyLL}`,borderRadius:20,marginBottom:16,overflow:"hidden"}}>
+    <div style={{padding:"16px 18px 0",display:"flex",alignItems:"center",gap:12}}>
+      <div style={{width:44,height:44,borderRadius:"50%",background:(actData?.col||PAL.grass)+"22",border:`2px solid ${(actData?.col||PAL.grass)}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{post.avatar||"👤"}</div>
+      <div style={{flex:1}}><div style={{fontWeight:700,fontSize:14,color:PAL.white}}>{post.auteur}</div><div style={{fontSize:11,color:PAL.gray,marginTop:2}}>📍 {post.lieu} · {tempsAffiche}</div></div>
+      <div style={{background:(actData?.col||PAL.grass)+"22",border:`1px solid ${(actData?.col||PAL.grass)}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}><span style={{fontSize:14}}>{post.icon}</span><span style={{fontSize:10,color:actData?.col||PAL.grass,fontWeight:700}}>{actData?.label||post.activite}</span></div>
+    </div>
+    <div style={{margin:"14px 18px",background:PAL.navy,borderRadius:14,padding:"14px 16px"}}>
+      <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22,color:actData?.col||PAL.grass,marginBottom:4}}>{post.desc}</div>
+      <div style={{fontSize:12,color:PAL.gray}}>{post.details}</div>
+      {post.note&&<div style={{fontSize:13,color:PAL.offW,marginTop:8,paddingTop:8,borderTop:`1px solid ${PAL.navyLL}`,fontStyle:"italic"}}>"{post.note}"</div>}
+    </div>
+    <div style={{margin:"0 18px 14px",background:`linear-gradient(135deg,${(actData?.col||PAL.grass)}18,${PAL.navyLL})`,borderRadius:12,padding:"20px",textAlign:"center",fontSize:48}}>{post.photo||"🌳"}</div>
+    <div style={{padding:"0 18px 14px",display:"flex",alignItems:"center",gap:12}}>
+      <button onClick={()=>onLike(post.id)} style={{background:isLiked?PAL.coral+"22":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:10,transition:"all .15s"}}>
+        <span style={{fontSize:18}}>{isLiked?"❤️":"🤍"}</span>
+        <span style={{fontSize:13,fontWeight:700,color:isLiked?PAL.coral:PAL.gray}}>{post.likes||0}</span>
+      </button>
+      <button onClick={()=>{setShowCom(v=>!v);if(!showCom)chargerComments();}} style={{background:showCom?PAL.sky+"22":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:10,transition:"all .15s"}}>
+        <span style={{fontSize:18}}>💬</span>
+        <span style={{fontSize:13,fontWeight:700,color:PAL.gray}}>{localComments.length}</span>
+      </button>
+    </div>
+    {showCom&&<div style={{borderTop:`1px solid ${PAL.navyLL}`,padding:"14px 18px"}}>
+      {localComments.map((c,i)=>(<div key={i} style={{display:"flex",gap:10,marginBottom:10}}>
+        <div style={{width:32,height:32,borderRadius:"50%",background:PAL.navyLL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>👤</div>
+        <div style={{flex:1,background:PAL.navy,borderRadius:10,padding:"8px 12px"}}>
+          <div style={{fontSize:11,fontWeight:700,color:PAL.grass,marginBottom:2}}>{c.auteur}</div>
+          <div style={{fontSize:13,color:PAL.offW}}>{c.txt}</div>
+        </div>
+      </div>))}
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        <div style={{width:32,height:32,borderRadius:"50%",background:PAL.grass+"22",border:`1px solid ${PAL.grass}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>{p.relation?.includes("mere")?"👩":"👨"}</div>
+        <input style={{flex:1,background:PAL.navy,border:`1.5px solid ${PAL.navyLL}`,borderRadius:10,color:PAL.white,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}} value={commentaire[post.id]||""} onChange={e=>setCommentaire(prev=>({...prev,[post.id]:e.target.value}))} placeholder="Ajouter un commentaire..." onKeyDown={e=>e.key==="Enter"&&envoyerComment()}/>
+        <button onClick={envoyerComment} style={{background:PAL.sky,color:"#fff",border:"none",borderRadius:10,padding:"8px 14px",cursor:"pointer",fontSize:14,fontFamily:"'Fredoka One', cursive"}}>Envoyer</button>
+      </div>
+    </div>}
+  </div>);
+}
+
 function CommunauteTab({p,PAL,Card,CH,ST}){
-  const [posts,setPosts]=useState(POSTS_DEMO);
+  const [posts,setPosts]=useState([]);
+  const [comments,setComments]=useState({});
   const [commentaire,setCommentaire]=useState({});
   const [liked,setLiked]=useState({});
   const [filtre,setFiltre]=useState("tous");
+  const [loading,setLoading]=useState(true);
 
-  function liker(id){
-    setLiked(prev=>({...prev,[id]:!prev[id]}));
-    setPosts(prev=>prev.map(post=>post.id===id?{...post,likes:post.likes+(liked[id]?-1:1)}:post));
+  // Charger les posts depuis Supabase
+  useEffect(()=>{
+    chargerPosts();
+  },[]);
+
+  async function chargerPosts(){
+    setLoading(true);
+    try {
+      const {data,error}=await supabase.from("duosport_posts").select("*").order("created_at",{ascending:false});
+      if(!error&&data) setPosts(data);
+    } catch(e){}
+    setLoading(false);
   }
-  function commenter(postId){
+
+  async function chargerComments(postId){
+    try {
+      const {data,error}=await supabase.from("duosport_comments").select("*").eq("post_id",String(postId)).order("created_at",{ascending:true});
+      if(!error&&data) setComments(prev=>({...prev,[postId]:data}));
+    } catch(e){}
+  }
+
+  async function liker(id){
+    const isLiked=liked[id];
+    setLiked(prev=>({...prev,[id]:!prev[id]}));
+    setPosts(prev=>prev.map(post=>post.id===id?{...post,likes:(post.likes||0)+(isLiked?-1:1)}:post));
+    try {
+      const post=posts.find(po=>po.id===id);
+      await supabase.from("duosport_posts").update({likes:(post.likes||0)+(isLiked?-1:1)}).eq("id",id);
+    } catch(e){}
+  }
+
+  async function commenter(postId){
     const txt=commentaire[postId];
     if(!txt||!txt.trim())return;
     const auteur=`${p.parentPrenom||"Vous"} & ${p.enfantPrenom||"Enfant"}`;
-    setPosts(prev=>prev.map(post=>post.id===postId?{...post,comments:[...post.comments,{auteur,txt}]}:post));
-    setCommentaire(prev=>({...prev,[postId]:""}));
+    try {
+      await supabase.from("duosport_comments").insert({post_id:String(postId),auteur,txt});
+      setCommentaire(prev=>({...prev,[postId]:""}));
+      chargerComments(postId);
+    } catch(e){}
   }
 
   const filtres=[{id:"tous",icon:"🌍",label:"Tous"},{id:"course",icon:"🏃",label:"Course"},{id:"velo",icon:"🚴",label:"Vélo"},{id:"marche",icon:"🚶",label:"Marche"}];
@@ -656,10 +763,10 @@ function CommunauteTab({p,PAL,Card,CH,ST}){
     <ST icon="🌍" title="Communauté" sub="Les sorties de la famille DuoSport" col={PAL.sky}/>
 
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
-      {[{icon:"👨‍👩‍👦",val:"248",lbl:"Familles",col:PAL.grass},{icon:"🏃",val:"1.2k",lbl:"Sorties",col:PAL.sky},{icon:"📍",val:"34",lbl:"Villes",col:PAL.sun}].map((s,i)=>(
+      {[{icon:"👨‍👩‍👦",val:posts.length>0?`${posts.length}`:"0",lbl:"Sorties",col:PAL.grass},{icon:"🏃",val:"DuoSport",lbl:"Communauté",col:PAL.sky},{icon:"📍",val:"France",lbl:"Réseau",col:PAL.sun}].map((s,i)=>(
         <div key={i} style={{background:PAL.navyL,border:`1.5px solid ${s.col}33`,borderRadius:14,padding:"14px",textAlign:"center"}}>
           <div style={{fontSize:24,marginBottom:4}}>{s.icon}</div>
-          <div style={{fontFamily:"'Fredoka One', cursive",fontSize:24,color:s.col}}>{s.val}</div>
+          <div style={{fontFamily:"'Fredoka One', cursive",fontSize:20,color:s.col}}>{s.val}</div>
           <div style={{fontSize:10,color:PAL.gray,letterSpacing:1,textTransform:"uppercase",marginTop:2}}>{s.lbl}</div>
         </div>
       ))}
@@ -669,54 +776,16 @@ function CommunauteTab({p,PAL,Card,CH,ST}){
       {filtres.map(f=>(<button key={f.id} onClick={()=>setFiltre(f.id)} style={{background:filtre===f.id?PAL.sky:PAL.navyL,border:`1.5px solid ${filtre===f.id?PAL.sky:PAL.navyLL}`,borderRadius:10,padding:"7px 14px",cursor:"pointer",color:filtre===f.id?"#fff":PAL.gray,fontSize:12,fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}>{f.icon} {f.label}</button>))}
     </div>
 
-    {postsFiltres.map(post=>{
-      const actData=ACTIVITES.find(a=>a.id===post.activite);
-      const isLiked=liked[post.id];
-      const [showCom,setShowCom]=useState(false);
-      return(<div key={post.id} style={{background:PAL.navyL,border:`1.5px solid ${PAL.navyLL}`,borderRadius:20,marginBottom:16,overflow:"hidden"}}>
-        <div style={{padding:"16px 18px 0",display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:44,height:44,borderRadius:"50%",background:actData?.col+"22",border:`2px solid ${actData?.col}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{post.avatar}</div>
-          <div style={{flex:1}}><div style={{fontWeight:700,fontSize:14,color:PAL.white}}>{post.auteur}</div><div style={{fontSize:11,color:PAL.gray,marginTop:2}}>📍 {post.lieu} · {post.temps}</div></div>
-          <div style={{background:actData?.col+"22",border:`1px solid ${actData?.col}44`,borderRadius:8,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}><span style={{fontSize:14}}>{post.icon}</span><span style={{fontSize:10,color:actData?.col,fontWeight:700}}>{actData?.label}</span></div>
-        </div>
+    {loading&&<div style={{textAlign:"center",padding:"40px 20px",color:PAL.gray}}><div style={{fontSize:32,marginBottom:8}}>⏳</div><div>Chargement des sorties...</div></div>}
 
-        <div style={{margin:"14px 18px",background:PAL.navy,borderRadius:14,padding:"14px 16px"}}>
-          <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22,color:actData?.col,marginBottom:4}}>{post.desc}</div>
-          <div style={{fontSize:12,color:PAL.gray}}>{post.details}</div>
-          {post.note&&<div style={{fontSize:13,color:PAL.offW,marginTop:8,paddingTop:8,borderTop:`1px solid ${PAL.navyLL}`,fontStyle:"italic"}}>"{post.note}"</div>}
-        </div>
+    {!loading&&postsFiltres.map(post=>(
+      <PostCard key={post.id} post={post} p={p} PAL={PAL}
+        onLike={liker} isLiked={!!liked[post.id]}
+        commentaire={commentaire} setCommentaire={setCommentaire}
+      />
+    ))}
 
-        <div style={{margin:"0 18px 14px",background:`linear-gradient(135deg,${actData?.col}18,${PAL.navyLL})`,borderRadius:12,padding:"20px",textAlign:"center",fontSize:48}}>{post.photo}</div>
-
-        <div style={{padding:"0 18px 14px",display:"flex",alignItems:"center",gap:12}}>
-          <button onClick={()=>liker(post.id)} style={{background:isLiked?PAL.coral+"22":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:10,transition:"all .15s"}}>
-            <span style={{fontSize:18}}>{isLiked?"❤️":"🤍"}</span>
-            <span style={{fontSize:13,fontWeight:700,color:isLiked?PAL.coral:PAL.gray}}>{post.likes}</span>
-          </button>
-          <button onClick={()=>setShowCom(v=>!v)} style={{background:showCom?PAL.sky+"22":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:10,transition:"all .15s"}}>
-            <span style={{fontSize:18}}>💬</span>
-            <span style={{fontSize:13,fontWeight:700,color:PAL.gray}}>{post.comments.length}</span>
-          </button>
-        </div>
-
-        {showCom&&<div style={{borderTop:`1px solid ${PAL.navyLL}`,padding:"14px 18px"}}>
-          {post.comments.map((c,i)=>(<div key={i} style={{display:"flex",gap:10,marginBottom:10}}>
-            <div style={{width:32,height:32,borderRadius:"50%",background:PAL.navyLL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>👤</div>
-            <div style={{flex:1,background:PAL.navy,borderRadius:10,padding:"8px 12px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:PAL.grass,marginBottom:2}}>{c.auteur}</div>
-              <div style={{fontSize:13,color:PAL.offW}}>{c.txt}</div>
-            </div>
-          </div>))}
-          <div style={{display:"flex",gap:8,marginTop:4}}>
-            <div style={{width:32,height:32,borderRadius:"50%",background:PAL.grass+"22",border:`1px solid ${PAL.grass}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>{p.relation?.includes("mere")?"👩":"👨"}</div>
-            <input style={{flex:1,background:PAL.navy,border:`1.5px solid ${PAL.navyLL}`,borderRadius:10,color:PAL.white,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}} value={commentaire[post.id]||""} onChange={e=>setCommentaire(prev=>({...prev,[post.id]:e.target.value}))} placeholder="Ajouter un commentaire..." onKeyDown={e=>e.key==="Enter"&&commenter(post.id)}/>
-            <button onClick={()=>commenter(post.id)} style={{background:PAL.sky,color:"#fff",border:"none",borderRadius:10,padding:"8px 14px",cursor:"pointer",fontSize:14,fontFamily:"'Fredoka One', cursive"}}>Envoyer</button>
-          </div>
-        </div>}
-      </div>);
-    })}
-
-    {postsFiltres.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:PAL.gray}}><div style={{fontSize:40,marginBottom:12}}>🏃</div><div>Aucune sortie pour le moment. Soyez le premier !</div></div>}
+    {!loading&&postsFiltres.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:PAL.gray}}><div style={{fontSize:40,marginBottom:12}}>🏃</div><div>Aucune sortie pour le moment. Soyez le premier !</div></div>}
 
     <div style={{background:`linear-gradient(135deg,${PAL.sky}18,${PAL.grass}18)`,border:`1.5px solid ${PAL.sky}44`,borderRadius:16,padding:"18px",textAlign:"center",marginTop:8}}>
       <div style={{fontFamily:"'Fredoka One', cursive",fontSize:18,color:PAL.white,marginBottom:6}}>🌍 Rejoignez la communauté !</div>
