@@ -260,13 +260,12 @@ function getAgeRules(age){
 }
 
 function genProgramme(sport, objsEnfant, style, pathosE, pathosP, rules, semaine, duree, relation) {
-  const spd = Math.min(rules.sprintMax, 8+Math.round(semaine*1.4));
   const reps = 6+Math.round(semaine*0.4);
+  const spd = Math.min(rules.sprintMax, 8+Math.round(semaine*1.4));
   const isLud = style==="ludique"||(style==="mixte"&&semaine%2===0);
-  const isStruct = style==="structure";
+  const hasLud = objsEnfant.includes("ludique")||objsEnfant.includes("ete");
   const hasVit = objsEnfant.includes("vitesse");
   const hasTech = objsEnfant.includes("technique");
-  const hasLud = objsEnfant.includes("ludique")||objsEnfant.includes("ete");
   const hasRenfo = objsEnfant.includes("renforcement");
   const asthme = pathosE.includes("Asthme");
   const genouxE = pathosE.includes("Genoux fragiles");
@@ -274,69 +273,134 @@ function genProgramme(sport, objsEnfant, style, pathosE, pathosP, rules, semaine
   const genouxP = pathosP.includes("Genoux");
   const phase2 = semaine>=Math.ceil(duree/2);
   const recupSprint = asthme?"60s":`${Math.max(30,45-semaine*2)}s`;
+  const prenom = relation.includes("fille")?"elle":"il";
   const exDeux = EXOS_DEUX[sport]||EXOS_DEUX.collectif;
-
+  const exDeuxIdx = (semaine-1)%exDeux.length;
   let ex=[];
 
-  // BLOC VITESSE
-  if(hasVit||sport==="collectif"||sport==="combat"){
-    ex.push({nom:`Sprint ${spd}m`,desc:`Départ debout, accélération maximale sur ${spd}m. Marche retour = récupération complète.`,reps:`${reps}×${spd}m`,recup:recupSprint,schema:"sprint",adapte:asthme?"⚠️ Récup 60s min — arrêt si gêne respiratoire":null});
-    ex.push({nom:"Départ assis → sprint",desc:"Assis au sol, tu cries GO — démarrage explosif sur 5m. Travaille le premier appui.",reps:`${Math.round(reps*.8)}×5m`,recup:"40s",schema:"depart_assis",adapte:genouxE?"✓ Sans impact genoux — assis direct":null});
+  // ══════════════════════════════════════
+  // PROGRAMMES PAR SPORT
+  // ══════════════════════════════════════
+
+  if(sport==="collectif"){
+    // Sprints et vivacité
+    if(hasVit||!hasTech){
+      ex.push({nom:`Sprint ${spd}m`,desc:`Départ debout, accélération max sur ${spd}m. Marche retour = récup complète.`,reps:`${reps}×${spd}m`,recup:recupSprint,schema:"sprint",adapte:asthme?"⚠️ Récup 60s min":null});
+      ex.push({nom:"Départ assis → sprint",desc:"Assis au sol, signal = démarrage explosif sur 5m. Travaille le 1er appui.",reps:`${Math.round(reps*.8)}×5m`,recup:"40s",schema:"depart_assis"});
+    }
+    // Technique balle
+    if(hasTech||!hasVit){
+      ex.push({nom:"Slalom plots balle au pied",desc:"6 plots à 1m, dribble slalom précis et rapide. Regard devant, pas sur le ballon.",reps:`${reps} passages`,recup:"35s",schema:"slalom"});
+      ex.push({nom:"Passe & contrôle",desc:"Face à face à 8m. Tu passes, ${prenom} contrôle et renvoie. Qualité du toucher de balle.",reps:`${reps*2} passes`,recup:null});
+    }
+    // Réactivité
+    ex.push({nom:"Réaction au clap → sprint",desc:`Tu frappes dans les mains — ${prenom} part en sprint vers le plot. Imprévisible !`,reps:`${Math.round(reps*.9)}×${spd}m`,recup:"35s",schema:"clap_sprint"});
+    // Ludique
+    if(isLud||hasLud){
+      ex.push({nom:"🎮 Jeu des 4 coins",desc:"4 plots + 1 centre. Sprint pour changer de coin au signal. Compétition !",reps:"5 min",schema:"4coins",tag:"DÉFI"});
+    }
+    // Phase 2
+    if(phase2){
+      ex.push({nom:"Navette 5m-10m-5m",desc:"Sprint 5m, demi-tour, retour 5m, demi-tour, 10m. Vivacité pure.",reps:`${Math.round(reps*.9)} navettes`,recup:"45s",schema:"navette",tag:"PROGRESSION"});
+      ex.push({nom:"🎮 1 contre 1",desc:`Zone 10×15m, chacun défend un but. Tu joues à 70%, ${prenom} à fond !`,reps:"2×2 min",schema:"1v1",tag:"FUN"});
+    }
   }
 
-  // BLOC RAQUETTE
-  if(sport==="raquette"){
-    ex.push({nom:"Pas chassés latéraux",desc:"2 plots à 4m, déplacements rapides côté à côté. Regard devant.",reps:`${reps}×10s`,recup:"30s",schema:"lateral"});
-    ex.push({nom:"Sprint + pivot + retour",desc:"Sprint 5m, pivot rapide, sprint retour. Le pivot = clé du jeu de raquette.",reps:`${Math.round(reps*.9)}×`,recup:"35s"});
+  else if(sport==="raquette"){
+    // Déplacements latéraux — spécifique raquette
+    ex.push({nom:"Pas chassés latéraux",desc:"2 plots à 4m. Déplacements rapides côté à côté, bras tendus. Regard devant.",reps:`${reps}×10s`,recup:"30s",schema:"lateral"});
+    ex.push({nom:"Sprint + pivot + retour",desc:"Sprint 5m, pivot rapide sur appuis, sprint retour. Le pivot = clé du jeu de raquette.",reps:`${reps}×`,recup:"35s"});
+    // Coordination main-oeil
+    ex.push({nom:"Réaction balle tombée",desc:"Tu tiens la balle en hauteur et la lâches sans prévenir. ${prenom} doit l'attraper avant le 2ème rebond.",reps:"15 fois",recup:"20s"});
+    ex.push({nom:"Slalom latéral plots",desc:"4 plots en ligne espacés 1m. Pas chassés entre chaque plot, sans croiser les pieds.",reps:`${reps} passages`,recup:"30s"});
+    if(isLud||hasLud){
+      ex.push({nom:"🎮 Défi chrono slalom",desc:"Slalom chronométré, 3 essais chacun. On bat son record ? Le perdant fait 5 squats !",reps:"3 essais chacun",tag:"DÉFI"});
+    }
+    if(phase2){
+      ex.push({nom:"Course en étoile",desc:"4 plots en croix à 5m du centre. Toucher chaque plot depuis le centre, revenir à chaque fois.",reps:`${Math.round(reps*.8)} passages`,recup:"40s",tag:"PROGRESSION"});
+    }
   }
 
-  // BLOC TECHNIQUE
-  if(hasTech||sport==="collectif"||sport==="raquette"){
-    ex.push({nom:"Slalom plots",desc:"6 plots espacés 1m, zigzag précis et rapide. Regarder devant, pas les pieds.",reps:`${reps} passages`,recup:"35s",schema:"slalom"});
+  else if(sport==="endurance"){
+    // Course progressive
+    const dureeRun = asthme?"8 min max":`${10+semaine} min`;
+    ex.push({nom:"Course continue",desc:asthme?"Allure très confortable, respiration nasale uniquement.":"Allure conversation — tu dois pouvoir parler. Régulier et tenu.",reps:dureeRun,recup:null});
+    ex.push({nom:"Accélérations progressives",desc:"Partir lent, accélérer progressivement sur 40m jusqu'à 80%. Contrôle de l'effort.",reps:`${Math.round(reps*.7)}×40m`,recup:"1 min"});
+    if(hasVit){
+      ex.push({nom:`Sprint ${spd}m`,desc:"Accélération courte et maximale pour travailler la vitesse de pointe.",reps:`${Math.round(reps*.6)}×${spd}m`,recup:`${recupSprint}`,schema:"sprint"});
+    }
+    if(isLud||hasLud){
+      ex.push({nom:"🎮 Course miroir",desc:"L'un accélère, l'autre suit. Changement de rôle toutes les 30s. Qui craque en premier ?",reps:"4×30s",tag:"FUN"});
+    }
+    if(phase2){
+      ex.push({nom:"Fartlek",desc:"Course libre : 1 min facile, 30s rapide, 1 min facile. Alterner sans s'arrêter.",reps:`${4+semaine} cycles`,tag:"PROGRESSION"});
+    }
   }
 
-  // BLOC ENDURANCE
-  if(sport==="endurance"){
-    ex.push({nom:"Course continue",desc:asthme?"Allure très confortable, respiration nasale":"Allure conversation, régulière et tenue.",reps:asthme?"8 min max":"12 min",recup:null});
-    ex.push({nom:"Accélérations progressives",desc:"Démarrer lent, monter à 80% d'intensité sur 30m. Contrôle de l'effort.",reps:`${Math.round(reps*.7)}×30m`,recup:"1 min"});
+  else if(sport==="combat"){
+    // Explosivité spécifique combat
+    ex.push({nom:"Sprint départ bas",desc:"Position basse (genoux fléchis), signal = explosion sur 8m. Simule une attaque.",reps:`${reps}×8m`,recup:"40s",schema:"sprint"});
+    ex.push({nom:"Pompes explosives",desc:"Descente contrôlée, poussée explosive. Force du haut du corps pour les contacts.",reps:`3×${6+Math.round(semaine*.5)}`,recup:"30s",adapte:rules.renfo==="très léger"?"✓ Sur les genoux":null});
+    ex.push({nom:"Gainage planche",desc:"Fondation de toute technique de combat. Corps aligné, aucun mouvement.",reps:`4×${18+semaine*2}s`,recup:"20s",schema:"planche"});
+    ex.push({nom:"Squat sauté",desc:"Amplitude complète, explosion vers le haut. Puissance des jambes = mobilité au combat.",reps:`3×${6+Math.round(semaine*.4)}`,recup:"35s",adapte:genouxE?"⚠️ Squat simple sans saut":null});
+    if(isLud||hasLud){
+      ex.push({nom:"🎮 Réaction multi-directionnelle",desc:"Tu pointes une direction au hasard, ${prenom} sprinte vers ce plot immédiatement.",reps:"12×",recup:"30s",tag:"DÉFI"});
+    }
+    if(phase2){
+      ex.push({nom:"Burpee simplifié",desc:"Sol → debout → saut. Enchaînement explosif. Cardio + force + coordination.",reps:`3×${4+Math.round(semaine*.4)}`,recup:"40s",tag:"PROGRESSION"});
+    }
   }
 
-  // BLOC GYM
-  if(sport==="gym"){
-    ex.push({nom:"Équilibre unipodal",desc:"Sur un pied, bras tendus sur les côtés. 20s les yeux ouverts, 10s yeux fermés si possible.",reps:"3×20s/pied",recup:"15s"});
-    ex.push({nom:"Squat sauté",desc:"Descente contrôlée, explosion vers le haut, réception souple genoux fléchis.",reps:`3×${6+Math.round(semaine*.4)}`,recup:"30s",adapte:genouxE?"⚠️ Remplacer par squat simple sans saut":null});
+  else if(sport==="gym"){
+    // AUCUN sprint — équilibre, souplesse, coordination
+    ex.push({nom:"Équilibre unipodal",desc:"Sur un pied, bras tendus, regard fixe devant. 20s yeux ouverts, 10s yeux fermés. Indispensable en gym.",reps:"3×20s/pied",recup:"15s"});
+    ex.push({nom:"Roulade avant",desc:"Menton rentré, dos arrondi, roulade sur le dos. Gainage du tronc tout au long du mouvement.",reps:`${reps} roulades`,recup:"20s"});
+    ex.push({nom:"Pont arrière statique",desc:"Mains et pieds au sol, ventre vers le ciel. Souplesse du dos et des épaules.",reps:`3×${15+semaine*2}s`,recup:"20s"});
+    ex.push({nom:"Sauts en hauteur sur place",desc:"Genoux vers la poitrine au maximum. Réception souple, genoux fléchis. Explosivité verticale.",reps:`3×${6+Math.round(semaine*.4)}`,recup:"30s",adapte:genouxE?"⚠️ Sauts réduits si douleur":null});
+    if(hasTech||hasRenfo){
+      ex.push({nom:"Gainage planche",desc:"Corps parfaitement aligné. En gym, la posture = tout.",reps:`3×${20+semaine*3}s`,recup:"20s",schema:"planche"});
+    }
+    if(isLud||hasLud){
+      ex.push({nom:"🎮 Défi équilibre",desc:"Sur un pied, yeux fermés. Qui tient le plus longtemps ? Comptez ensemble !",reps:"5 essais chacun",tag:"FUN"});
+    }
+    if(phase2){
+      ex.push({nom:"Rotation de trunk",desc:"Assis en V, pieds levés, passer un objet de gauche à droite. Gainage oblique.",reps:`3×${10+Math.round(semaine*.5)}/côté`,recup:"25s",tag:"PROGRESSION"});
+    }
   }
 
-  // BLOC NATATION
-  if(sport==="natation"){
-    ex.push({nom:"Gainage planche",desc:"Fondamental pour la position dans l'eau. Corps parfaitement aligné.",reps:`4×${20+semaine*3}s`,recup:"20s",schema:"planche"});
-    ex.push({nom:"Superman",desc:"Ventre au sol, lever bras et jambes opposés alternativement. Force du dos.",reps:"3×10",recup:"25s"});
+  else if(sport==="natation"){
+    // AUCUN sprint — gainage, souplesse, cardio terrestre
+    ex.push({nom:"Gainage planche",desc:"Fondamental pour la position dans l'eau. Corps parfaitement aligné, ne pas creuser le dos.",reps:`4×${20+semaine*3}s`,recup:"20s",schema:"planche"});
+    ex.push({nom:"Superman",desc:"Ventre au sol, lever bras et jambes opposés simultanément. Force du dos = meilleure position natatoire.",reps:`3×${8+Math.round(semaine*.4)}`,recup:"25s"});
+    ex.push({nom:"Rotations d'épaules",desc:"Grands cercles avant et arrière, bras tendus. Mobilité des épaules = efficacité de nage.",reps:"3×15 chaque sens",recup:"15s"});
+    ex.push({nom:"Pont fessier",desc:"Couché sur le dos, hanches poussées vers le ciel. Force de propulsion des jambes.",reps:`3×${10+Math.round(semaine*.4)}`,recup:"25s"});
+    if(hasVit){
+      ex.push({nom:"Saut en longueur sur place",desc:"Simulation du départ plongeon. Explosion des bras et jambes ensemble.",reps:`3×${6+Math.round(semaine*.3)}`,recup:"30s"});
+    }
+    if(isLud||hasLud){
+      ex.push({nom:"🎮 Défi saut longueur",desc:"Saut en longueur sur place. Chacun marque sa distance. Qui bat son record ?",reps:"5 essais chacun",tag:"FUN"});
+    }
+    if(phase2){
+      ex.push({nom:"Abdos bicycle",desc:"Couché sur le dos, rotation trunk avec les coudes vers les genoux. Lent et contrôlé.",reps:`3×${12+Math.round(semaine*.4)}/côté`,recup:"25s",tag:"PROGRESSION"});
+    }
   }
 
-  // BLOC LUDIQUE
-  if((isLud||hasLud)&&!isStruct){
-    ex.push({nom:"🎮 Jeu des 4 coins",desc:"4 plots + 1 au centre. Sprint pour changer de coin au signal. Compétition !",reps:"5 min",recup:null,schema:"4coins",tag:"DÉFI"});
-    ex.push({nom:"🏁 Défi chrono slalom",desc:"Slalom chronométré — 3 essais chacun. On bat son record ? Le perdant fait 5 pompes !",reps:"3 essais chacun",recup:"40s",tag:"FUN"});
-  }
+  // ══════════════════════════════════════
+  // COMMUN À TOUS LES SPORTS
+  // ══════════════════════════════════════
 
-  // EXERCICE À DEUX — TOUJOURS
-  const exDeuxIdx = (semaine-1)%exDeux.length;
+  // Exercice à deux — adapté au sport
   ex.push(exDeux[exDeuxIdx]);
 
-  // RÉACTION
-  ex.push({nom:"Réaction au clap → sprint",desc:`Tu frappes dans les mains — ${relation.includes("fille")?"elle":"il"} part en sprint max vers le plot. Imprévisible !`,reps:`${Math.round(reps*.9)}×${spd}m`,recup:"35s",schema:"clap_sprint"});
-
-  // RENFORCEMENT
-  ex.push({nom:dosP?"Gainage planche (adapté)":"Gainage planche",desc:dosP?"Genoux au sol si besoin, éviter la cambrure":"Avant-bras au sol, corps droit, fessiers contractés.",reps:`3×${18+semaine*2}s`,recup:"20s",schema:"planche",adapte:dosP?"✓ Adapté dos":null});
-  ex.push({nom:genouxP?"Fentes statiques":"Fentes marchées",desc:genouxP?"Fente fixe sans déplacement — même bénéfice, moins d'impact":"Grand pas avant, genou arrière proche du sol, buste droit.",reps:`3×${6+Math.round(semaine*.5)}/jambe`,recup:"30s",adapte:genouxP?"✓ Adapté genoux":null});
-  if(hasRenfo){
-    ex.push({nom:"Pompes",desc:`${rules.renfo==="très léger"?"Sur les genoux — bonne forme avant tout":"Buste droit, descente contrôlée, montée explosive"}`,reps:`3×${6+Math.round(semaine*.5)}`,recup:"30s",adapte:rules.renfo==="très léger"?"✓ Sur les genoux à cet âge":null});
+  // Renforcement commun adapté à l'âge
+  if(sport!=="gym"&&sport!=="natation"){
+    ex.push({nom:dosP?"Gainage planche (adapté dos)":"Gainage planche",desc:dosP?"Genoux au sol si besoin, ne pas creuser le dos":"Avant-bras au sol, corps droit, fessiers contractés.",reps:`3×${18+semaine*2}s`,recup:"20s",schema:"planche",adapte:dosP?"✓ Adapté dos":null});
   }
-
-  // PHASE 2 : NAVETTE + 1V1
-  if(phase2){
-    ex.push({nom:"Navette 5m-10m-5m",desc:"Sprint 5m, demi-tour explosif, 5m retour, demi-tour, 10m. Le demi-tour rapide = vivacité pure.",reps:`${Math.round(reps*.9)} navettes`,recup:"45s",schema:"navette",tag:"PROGRESSION"});
-    ex.push({nom:"🎮 1 contre 1 espace réduit",desc:`Zone 10×15m, chacun défend un but. Tu joues à 70%, ${relation.includes("fille")?"elle":"il"} à fond. Compétition !`,reps:"2×2 min",recup:"1 min",schema:"1v1",tag:"FUN"});
+  if(sport!=="endurance"){
+    ex.push({nom:genouxP?"Fentes statiques":"Fentes marchées",desc:genouxP?"Fente fixe, pas de déplacement":"Grand pas avant, genou arrière proche du sol, buste droit.",reps:`3×${6+Math.round(semaine*.5)}/jambe`,recup:"30s",adapte:genouxP?"✓ Adapté genoux":null});
+  }
+  if(hasRenfo&&sport!=="combat"){
+    ex.push({nom:"Pompes",desc:rules.renfo==="très léger"?"Sur les genoux — bonne forme avant tout":"Buste droit, descente contrôlée en 2s, montée explosive.",reps:`3×${6+Math.round(semaine*.5)}`,recup:"30s",adapte:rules.renfo==="très léger"?"✓ Sur les genoux à cet âge":null});
   }
 
   return ex;
@@ -810,6 +874,52 @@ function MacroBar({label,val,max,col}){
   </div>);
 }
 
+// Instructions de préparation par type de plat
+const PREP_INSTRUCTIONS={
+  "poulet":[
+    "Couper le poulet en morceaux ou lamelles selon la recette.",
+    "Faire chauffer un filet d'huile dans une poêle à feu moyen-vif.",
+    "Faire dorer le poulet 5-6 min de chaque côté jusqu'à belle coloration.",
+    "Ajouter les légumes et cuire 5 min supplémentaires.",
+    "Assaisonner sel, poivre, herbes selon le goût. Servir chaud."
+  ],
+  "boeuf":[
+    "Sortir la viande du réfrigérateur 15 min avant cuisson.",
+    "Faire chauffer la poêle à feu vif avec un filet d'huile.",
+    "Saisir le bœuf 2-3 min de chaque côté pour une cuisson rosée.",
+    "Laisser reposer 2 min avant de couper.",
+    "Accompagner avec les légumes et féculents choisis."
+  ],
+  "poisson":[
+    "Sécher le poisson avec du papier absorbant.",
+    "Huiler légèrement le poisson et assaisonner sel, poivre, citron.",
+    "Cuire au four 180°C pendant 15-20 min ou à la poêle 4 min/côté.",
+    "Vérifier la cuisson : la chair doit se détacher facilement.",
+    "Servir immédiatement avec les accompagnements."
+  ],
+  "oeufs":[
+    "Casser les œufs dans un bol et battre légèrement.",
+    "Assaisonner sel, poivre et ajouter les légumes hachés.",
+    "Faire chauffer une poêle huilée à feu moyen.",
+    "Verser les œufs et cuire selon la texture souhaitée.",
+    "Servir chaud avec une tranche de pain."
+  ],
+  "default":[
+    "Préparer et laver tous les ingrédients.",
+    "Cuire les féculents selon le paquet (riz: 15 min, pâtes: 8-10 min).",
+    "Faire revenir les légumes à la poêle 5-7 min avec un filet d'huile.",
+    "Cuire la protéine choisie séparément selon sa nature.",
+    "Assembler dans une assiette, assaisonner et servir."
+  ]
+};
+
+function getPrepInstructions(repas){
+  for(const key of Object.keys(PREP_INSTRUCTIONS)){
+    if(key!=="default"&&repas.proteines?.includes(key)) return PREP_INSTRUCTIONS[key];
+  }
+  return PREP_INSTRUCTIONS.default;
+}
+
 function RepasCard({repas,moment}){
   const [open,setOpen]=useState(false);
   const mCol=moment==="midi"?P.sun:P.purple;
@@ -834,9 +944,16 @@ function RepasCard({repas,moment}){
       <MacroBar label="Protéines" val={repas.p} max={50} col={P.coral}/>
       <MacroBar label="Glucides"  val={repas.g} max={70} col={P.sky}/>
       <MacroBar label="Lipides"   val={repas.l} max={30} col={P.sun}/>
-      <div style={{marginTop:10,fontSize:12,color:P.gray}}>
-        🛒 Ingrédients : <span style={{color:P.offW}}>{[...repas.proteines,...repas.feculents,...repas.legumes].join(", ")}</span>
+      <div style={{marginTop:12,fontSize:12,color:P.gray,marginBottom:10}}>
+        🛒 <strong style={{color:P.offW}}>Ingrédients :</strong> {[...repas.proteines,...repas.feculents,...repas.legumes].join(", ")}
       </div>
+      <div style={{fontSize:11,color:P.grass,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>📋 Préparation</div>
+      {getPrepInstructions(repas).map((step,i)=>(
+        <div key={i} style={{display:"flex",gap:10,marginBottom:8,alignItems:"flex-start"}}>
+          <div style={{width:20,height:20,borderRadius:"50%",background:P.grass+"33",border:`1px solid ${P.grass}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:P.grass,flexShrink:0,marginTop:1}}>{i+1}</div>
+          <div style={{fontSize:13,color:P.offW,lineHeight:1.5}}>{step}</div>
+        </div>
+      ))}
     </div>}
   </div>);
 }
@@ -976,15 +1093,20 @@ export default function FitFamilyApp(){
 
   function marquer(i){setSemaines(prev=>prev.map((s,j)=>j===i?{...s,complete:true}:s));}
 
-  const TABS=[
-    {id:"profil",   label:"👤",full:"Profils"},
-    {id:"programme",label:"⚽",full:"Programme"},
-    {id:"libre",    label:"🏃",full:"Libre"},
-    {id:"communaute",label:"🌍",full:"Communauté"},
-    {id:"solo",     label:"💪",full:"Solo"},
-    {id:"nutrition",label:"🥗",full:"Nutrition"},
-    {id:"trophees", label:"🏆",full:`Trophées${tropheesOk.length>0?` (${tropheesOk.length})`:""}` },
+  const BOTTOM_TABS=[
+    {id:"programme", label:"Entraîner", icon:"🎯"},
+    {id:"libre",     label:"Libre",     icon:"⏱️"},
+    {id:"communaute",label:"Communauté",icon:"🌍"},
   ];
+
+  const BURGER_ITEMS=[
+    {id:"profil",    label:"👤 Profils"},
+    {id:"solo",      label:"💪 Séance Solo"},
+    {id:"nutrition", label:"🥗 Nutrition"},
+    {id:"trophees",  label:`🏆 Trophées${tropheesOk.length>0?` (${tropheesOk.length})`:""}`},
+  ];
+
+  const [burgerOpen,setBurgerOpen]=useState(false);
 
   return(<div style={{background:P.navy,minHeight:"100vh",color:P.white,fontFamily:"'DM Sans',sans-serif"}}>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
@@ -1008,14 +1130,40 @@ export default function FitFamilyApp(){
     </div>
     {prog&&<div style={{height:4,background:P.navyLL}}><div style={{height:"100%",background:`linear-gradient(90deg,${P.grass},${P.sky})`,width:`${(semComp/p.duree)*100}%`,transition:"width .4s"}}/></div>}
 
-    {/* NAV */}
-    <div style={{display:"flex",borderBottom:`1px solid ${P.navyLL}`,overflowX:"auto",background:P.navyL}}>
-      {TABS.map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"13px 8px",background:"none",border:"none",color:tab===t.id?P.grass:P.gray,fontFamily:"'Fredoka One', cursive",fontSize:13,cursor:"pointer",borderBottom:tab===t.id?`3px solid ${P.grass}`:"3px solid transparent",whiteSpace:"nowrap",minWidth:60}}>
-        <div style={{fontSize:18}}>{t.label}</div><div style={{fontSize:10}}>{t.full}</div>
-      </button>))}
+    {/* BURGER MENU OVERLAY */}
+    {burgerOpen&&<div onClick={()=>setBurgerOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:200,display:"flex",alignItems:"flex-start",justifyContent:"flex-end"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:P.navyL,width:260,minHeight:"100vh",padding:"24px 0",boxShadow:"-4px 0 30px #00000060"}}>
+        <div style={{padding:"0 20px 20px",borderBottom:`1px solid ${P.navyLL}`,marginBottom:8}}>
+          <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22}}><span style={{color:P.sun}}>FIT</span><span style={{color:P.grass}}>FAMILY</span></div>
+          <div style={{color:P.gray,fontSize:12,marginTop:2}}>{rel.icons} {p.enfantPrenom||"Votre duo"}</div>
+        </div>
+        {BURGER_ITEMS.map(item=>(
+          <button key={item.id} onClick={()=>{setTab(item.id);setBurgerOpen(false);}} style={{width:"100%",background:tab===item.id?P.grass+"22":"none",border:"none",padding:"14px 20px",textAlign:"left",color:tab===item.id?P.grass:P.offW,fontFamily:"'Fredoka One', cursive",fontSize:16,cursor:"pointer",display:"block",letterSpacing:.5}}>
+            {item.label}
+          </button>
+        ))}
+        <div style={{padding:"20px 20px 0",marginTop:8,borderTop:`1px solid ${P.navyLL}`}}>
+          <div style={{fontSize:11,color:P.gray,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Progression</div>
+          <div style={{height:6,background:P.navyLL,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",background:`linear-gradient(90deg,${P.grass},${P.sky})`,width:`${(semComp/Math.max(p.duree,1))*100}%`,transition:"width .4s",borderRadius:3}}/></div>
+          <div style={{fontSize:11,color:P.gray,marginTop:6}}>{semComp}/{p.duree} semaines</div>
+        </div>
+      </div>
+    </div>}
+
+    {/* NAV HEADER */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:P.navyL,borderBottom:`1px solid ${P.navyLL}`,position:"sticky",top:0,zIndex:100}}>
+      <button onClick={()=>setBurgerOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:"6px",display:"flex",flexDirection:"column",gap:5}}>
+        <div style={{width:22,height:2,background:P.offW,borderRadius:1}}/>
+        <div style={{width:22,height:2,background:P.offW,borderRadius:1}}/>
+        <div style={{width:16,height:2,background:P.offW,borderRadius:1}}/>
+      </button>
+      <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22}}><span style={{color:P.sun}}>FIT</span><span style={{color:P.grass}}>FAMILY</span></div>
+      <div style={{width:34,height:34,borderRadius:"50%",background:P.grass+"22",border:`2px solid ${P.grass}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
+        {rel.icons}
+      </div>
     </div>
 
-    <div style={{maxWidth:820,margin:"0 auto",padding:"22px 14px"}}>
+    <div style={{maxWidth:820,margin:"0 auto",padding:"22px 14px 90px"}}>
 
       {/* PROFILS */}
       {tab==="profil"&&<div>
@@ -1154,7 +1302,7 @@ export default function FitFamilyApp(){
 
       {/* PROGRAMME */}
       {tab==="programme"&&<div>
-        <ST icon="⚽" title="Programme Duo !" sub={`${sportObj?.icon} ${sportObj?.label} · ${p.duree} semaines`} col={P.grass}/>
+        <ST icon={sportObj?.icon||"🎯"} title="Programme Duo !" sub={`${sportObj?.icon} ${sportObj?.label} · ${p.duree} semaines`} col={P.grass}/>
         {!prog?(<div style={{textAlign:"center",padding:40,color:P.gray}}><div style={{fontSize:48,marginBottom:12}}>⚙️</div><div style={{fontSize:15,marginBottom:20}}>Configurez d'abord vos profils !</div><button onClick={()=>setTab("profil")} style={{background:P.grass,color:"#fff",border:"none",borderRadius:12,padding:"13px 28px",fontSize:15,fontFamily:"'Fredoka One', cursive",cursor:"pointer"}}>Configurer →</button></div>):(<>
           <div style={{background:P.navyL,border:`1.5px solid ${P.navyLL}`,borderRadius:14,padding:"12px 18px",marginBottom:18,display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
             <span style={{fontSize:24}}>{rel.icons}</span>
@@ -1237,6 +1385,15 @@ export default function FitFamilyApp(){
         {semComp===0&&<div style={{textAlign:"center",padding:"30px 0",color:P.gray}}><div style={{fontSize:40,marginBottom:8}}>🎯</div><div>Validez votre première semaine dans Programme pour débloquer votre premier trophée !</div></div>}
       </div>}
 
+    </div>
+    {/* BARRE BAS */}
+    <div style={{position:"fixed",bottom:0,left:0,right:0,background:P.navyL,borderTop:`1px solid ${P.navyLL}`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {BOTTOM_TABS.map(t=>(
+        <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:"none",border:"none",padding:"12px 8px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,borderTop:tab===t.id?`3px solid ${P.grass}`:"3px solid transparent"}}>
+          <span style={{fontSize:22}}>{t.icon}</span>
+          <span style={{fontSize:10,fontFamily:"'Fredoka One', cursive",color:tab===t.id?P.grass:P.gray,letterSpacing:.5}}>{t.label}</span>
+        </button>
+      ))}
     </div>
     <style>{`input:focus,select:focus{border-color:${P.grass}!important;outline:none}button:active{transform:scale(.96)}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:${P.navy}}::-webkit-scrollbar-thumb{background:${P.navyLL};border-radius:3px}`}</style>
   </div>);
