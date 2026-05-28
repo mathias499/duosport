@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from './supabase.js';
 
 // ═══════════════════════════════════════════════════════════
@@ -407,8 +407,289 @@ function genProgramme(sport, objsEnfant, style, pathosE, pathosP, rules, semaine
 }
 
 // ═══════════════════════════════════════════════════════════
-// DONNÉES
+// BANQUE D'EXERCICES PAR SPORT V2 — SANS MATÉRIEL
+// Blocs de 8 semaines · Séance A = Cardio/Technique · Séance B = Vivacité/Force
 // ═══════════════════════════════════════════════════════════
+const BANQUE={
+  collectif:{
+    A:[
+      {b:1,nom:"Course en étoile",desc:"4 points à 5m de toi. Toucher chaque point depuis le centre et revenir. Rythme régulier.",reps:"3×4 tours",recup:"45s"},
+      {b:1,nom:"Slalom imaginaire",desc:"10 pas à gauche, 10 à droite en zigzag. Regard devant, travail des appuis.",reps:"6 passages",recup:"30s"},
+      {b:1,nom:"Course légère 8 min",desc:"Allure conversation. On peut parler en courant.",reps:"8 min",recup:null},
+      {b:1,nom:"🎮 Chat et souris",desc:"Le parent court dans une zone de 10m, l'enfant essaie de le toucher. Rôles inversés.",reps:"3×1 min",recup:"30s",tag:"FUN"},
+      {b:2,nom:"Navette 10m",desc:"Sprint 10m, demi-tour, retour. Enchaîner.",reps:"6 navettes",recup:"30s"},
+      {b:2,nom:"Appuis latéraux",desc:"Pieds joints, sauts latéraux G/D. Atterrissage souple.",reps:"4×15s",recup:"20s"},
+      {b:2,nom:"Fartlek 10 min",desc:"1 min allure + 30s rapide + 1 min allure. Le parent donne le signal.",reps:"5 cycles",recup:null},
+      {b:2,nom:"🎮 Miroir",desc:"L'enfant copie tous les mouvements du parent. Changement de rôle toutes les 30s.",reps:"4×30s",recup:"20s",tag:"FUN"},
+      {b:3,nom:"Circuit cardio",desc:"Course 2 min + 20 sauts + course 2 min. Sans pause.",reps:"3 circuits",recup:"1 min"},
+      {b:3,nom:"Déplacement en carré",desc:"Carré imaginaire de 4m. Changer de direction au signal du parent.",reps:"5×30s",recup:"30s"},
+      {b:3,nom:"Accélérations 30m",desc:"Partir lent, monter à 80% sur 30m. Contrôle total.",reps:"6×30m",recup:"45s"},
+      {b:3,nom:"🎮 Course poursuite",desc:"Le parent a 3m d'avance. L'enfant doit le rattraper avant 20m.",reps:"6×",recup:"40s",tag:"DÉFI"},
+      {b:4,nom:"Fartlek 15 min",desc:"1 min facile + 30s fort + 1 min facile. Alterner sans s'arrêter.",reps:"6 cycles",recup:null},
+      {b:4,nom:"Course coordonnée",desc:"Courir en imitant différentes façons de courir : talons hauts, genoux hauts, bras croisés.",reps:"4×20m",recup:"30s"},
+      {b:4,nom:"🎮 Relay challenge",desc:"Sprint 10m + 5 pompes + sprint retour. L'enfant vs parent. Chrono !",reps:"4 manches",recup:"1 min",tag:"DÉFI"},
+    ],
+    B:[
+      {b:1,nom:"Sprint 15m",desc:"Départ position athlétique. Sprint max. Marche retour.",reps:"8×15m",recup:"40s"},
+      {b:1,nom:"Départ assis",desc:"Assis au sol, signal → se lever et sprint 5m.",reps:"8×5m",recup:"30s"},
+      {b:1,nom:"Gainage planche",desc:"Corps droit, avant-bras au sol. Fessiers serrés.",reps:"3×25s",recup:"20s"},
+      {b:1,nom:"🎮 Réaction au signal",desc:"Parent dit GO au hasard → sprint 8m. Fausses alertes autorisées.",reps:"10×",recup:"30s",tag:"DÉFI"},
+      {b:2,nom:"Sprint 20m",desc:"Accélération maximale sur 20m.",reps:"6×20m",recup:"45s"},
+      {b:2,nom:"Pompes genoux",desc:"Descente 2s, montée explosive.",reps:"3×8",recup:"30s"},
+      {b:2,nom:"Squat sauté",desc:"Descente contrôlée, explosion vers le haut, atterrissage souple.",reps:"3×8",recup:"35s"},
+      {b:2,nom:"🎮 1 contre 1 zone",desc:"Zone 6×6m. L'enfant essaie de passer la ligne défendue par le parent.",reps:"4×1 min",recup:"30s",tag:"FUN"},
+      {b:3,nom:"Sprint 25m + arrêt",desc:"Sprint max 25m, arrêt total au signal. Travail du freinage.",reps:"6×25m",recup:"50s"},
+      {b:3,nom:"Pompes explosives",desc:"Descente lente 3s, poussée explosive.",reps:"3×6",recup:"35s"},
+      {b:3,nom:"Fentes marchées",desc:"Grand pas avant, genou arrière près du sol.",reps:"3×8/jambe",recup:"30s"},
+      {b:3,nom:"🎮 Défi sprint",desc:"10m chronométré. 3 essais chacun. Perdant fait 5 squats !",reps:"3 essais",recup:"1 min",tag:"DÉFI"},
+      {b:4,nom:"Navette 5-10-5",desc:"Sprint 5m, demi-tour, 5m, demi-tour, 10m. La plus intense !",reps:"6 navettes",recup:"1 min"},
+      {b:4,nom:"Burpee complet",desc:"Sol → pompe → relevé → saut bras levés.",reps:"3×6",recup:"45s"},
+      {b:4,nom:"🎮 Circuit max",desc:"Sprint 10m + 5 burpees + retour. 3 rounds chrono.",reps:"3 rounds",recup:"1 min",tag:"DÉFI"},
+    ],
+  },
+  raquette:{
+    A:[
+      {b:1,nom:"Pas chassés latéraux",desc:"2 zones à 4m. Se déplacer en pas chassés sans croiser les pieds.",reps:"4×15s",recup:"20s"},
+      {b:1,nom:"Cardio 8 min",desc:"Course à allure conversation.",reps:"8 min",recup:null},
+      {b:1,nom:"Coordination main-main",desc:"Face à face, frapper la main de l'autre en rythme. Accélérer progressivement.",reps:"3×30s",recup:"15s"},
+      {b:1,nom:"🎮 Miroir latéral",desc:"Le parent fait des pas chassés, l'enfant copie en miroir.",reps:"4×20s",recup:"15s",tag:"FUN"},
+      {b:2,nom:"Course en carré + pivots",desc:"Carré 4m. Course sur chaque côté avec pivot rapide aux angles.",reps:"5×30s",recup:"25s"},
+      {b:2,nom:"Réaction directionnelle",desc:"Le parent pointe G ou D → l'enfant part dans cette direction en 1 pas explosif.",reps:"3×12",recup:"25s"},
+      {b:2,nom:"Fartlek 10 min",desc:"1 min allure + 30s déplacements latéraux + 1 min allure.",reps:"5 cycles",recup:null},
+      {b:2,nom:"🎮 Défense de zone",desc:"L'enfant doit toucher le parent dans une zone 4×4m.",reps:"3×1 min",recup:"30s",tag:"FUN"},
+      {b:3,nom:"Sprint + pivot + retour",desc:"Sprint 6m, pivot sur avant-pied, sprint retour.",reps:"8×",recup:"35s"},
+      {b:3,nom:"Déplacement avant-arrière",desc:"2 lignes à 5m. Course avant + course arrière. Ne jamais tourner le dos.",reps:"4×20s",recup:"25s"},
+      {b:3,nom:"🎮 Course en étoile chrono",desc:"5 points à 3m. Les toucher tous le plus vite possible.",reps:"3 essais",recup:"45s",tag:"DÉFI"},
+      {b:4,nom:"Circuit déplacements",desc:"Latéral 4m → avant 4m → latéral retour → arrière. 10 tours.",reps:"10 tours",recup:"1 min"},
+      {b:4,nom:"Coordination complexe",desc:"Déplacement latéral + clap + déplacement inverse + saut.",reps:"4×12",recup:"30s"},
+      {b:4,nom:"🎮 Défi multi-directionnel",desc:"Parent annonce direction + action. L'enfant exécute immédiatement.",reps:"20 actions",recup:"30s",tag:"DÉFI"},
+    ],
+    B:[
+      {b:1,nom:"Sprint 10m",desc:"Explosivité courte distance — spécifique raquette.",reps:"8×10m",recup:"30s"},
+      {b:1,nom:"Gainage planche",desc:"Stabilité du tronc = stabilité du geste.",reps:"3×25s",recup:"20s"},
+      {b:1,nom:"Équilibre unipodal",desc:"Sur un pied, bras tendus. Proprioception = prévention cheville.",reps:"3×20s/pied",recup:"15s"},
+      {b:1,nom:"🎮 Défi équilibre",desc:"Yeux fermés sur un pied. Qui tient le plus longtemps ?",reps:"5 essais",recup:"20s",tag:"FUN"},
+      {b:2,nom:"Sprint + déplacement latéral",desc:"Sprint 8m puis 4m de déplacement latéral, retour.",reps:"6×",recup:"40s"},
+      {b:2,nom:"Pompes",desc:"Force du haut du corps.",reps:"3×8",recup:"30s"},
+      {b:2,nom:"Squat + saut",desc:"Squat profond, explosion vers le haut.",reps:"3×8",recup:"35s"},
+      {b:2,nom:"🎮 Réaction",desc:"Parent crie G/D/avant/arrière, l'enfant part en sprint 2m.",reps:"15 actions",recup:"20s",tag:"DÉFI"},
+      {b:3,nom:"Sprint + 3 pivots",desc:"Sprint 5m, pivot, 5m, pivot, 5m retour.",reps:"6×",recup:"45s"},
+      {b:3,nom:"Fentes statiques",desc:"Position fente, tenir. Renforce les appuis.",reps:"3×20s/jambe",recup:"25s"},
+      {b:3,nom:"🎮 Réaction multi",desc:"GO → toucher un point et revenir. Parent change le point pendant le trajet.",reps:"12×",recup:"30s",tag:"DÉFI"},
+      {b:4,nom:"Navette 4m",desc:"Sprint 4m, demi-tour explosif. Distance courte = spécificité raquette.",reps:"10 navettes",recup:"35s"},
+      {b:4,nom:"Burpee",desc:"Sol complet + saut.",reps:"3×6",recup:"45s"},
+      {b:4,nom:"🎮 Sprint chronométré",desc:"Parcours 8m + pivot + 8m retour. Record à battre !",reps:"3 essais",recup:"1 min",tag:"DÉFI"},
+    ],
+  },
+  endurance:{
+    A:[
+      {b:1,nom:"Course continue 10 min",desc:"Allure conversation — pouvoir parler en courant.",reps:"10 min",recup:null},
+      {b:1,nom:"Respiration rythmée",desc:"Inspire 3 foulées, expire 3 foulées. Conscience respiratoire.",reps:"3 min",recup:null},
+      {b:1,nom:"🎮 Course en duo",desc:"Courir ensemble à la même allure. Celui qui part devant ralentit.",reps:"8 min",recup:null,tag:"FUN"},
+      {b:2,nom:"Course continue 14 min",desc:"Progression de la durée. Allure stable.",reps:"14 min",recup:null},
+      {b:2,nom:"Foulées bondissantes",desc:"Exagérer la foulée, pousser fort sur chaque appui.",reps:"4×15m",recup:"45s"},
+      {b:2,nom:"🎮 Record distance 1 min",desc:"1 minute de course, mesurer la distance. Battre son record !",reps:"2 essais",recup:"2 min",tag:"DÉFI"},
+      {b:3,nom:"Fartlek 15 min",desc:"1 min facile + 30s rapide + 1 min facile. 6 cycles.",reps:"6 cycles",recup:null},
+      {b:3,nom:"Montée de genoux",desc:"Lever les genoux à 90° à chaque foulée. Technique de course.",reps:"4×20m",recup:"45s"},
+      {b:3,nom:"🎮 Course orientée",desc:"Parent désigne 4 objets. Parcourir les 4 le plus vite possible.",reps:"4×",recup:"1 min",tag:"FUN"},
+      {b:4,nom:"Course continue 20 min",desc:"Progression maximale. Allure conversation maintenue.",reps:"20 min",recup:null},
+      {b:4,nom:"Fractionné court",desc:"30s fort + 30s marche. Alternance effort/récup.",reps:"6 cycles",recup:null},
+      {b:4,nom:"🎮 Chrono 400m",desc:"400m à allure libre, chronométré. Battre son record !",reps:"1×",recup:null,tag:"DÉFI"},
+    ],
+    B:[
+      {b:1,nom:"Sprint 15m",desc:"Vitesse de pointe indispensable même en endurance.",reps:"6×15m",recup:"40s"},
+      {b:1,nom:"Gainage planche",desc:"Foundation du coureur.",reps:"3×25s",recup:"20s"},
+      {b:1,nom:"Squat",desc:"Force des jambes = efficacité de foulée.",reps:"3×10",recup:"30s"},
+      {b:1,nom:"🎮 Saut longueur",desc:"Saut en longueur. 3 essais chacun.",reps:"3 essais",recup:"30s",tag:"FUN"},
+      {b:2,nom:"Sprint 20m",desc:"Distance progressive.",reps:"6×20m",recup:"45s"},
+      {b:2,nom:"Fentes marchées",desc:"Force des jambes sur 10m.",reps:"3×10m",recup:"30s"},
+      {b:2,nom:"🎮 Saut + sprint",desc:"Saut en longueur + sprint 10m immédiatement.",reps:"5×",recup:"45s",tag:"DÉFI"},
+      {b:3,nom:"Sprint 30m",desc:"Distance augmente avec la progression.",reps:"5×30m",recup:"1 min"},
+      {b:3,nom:"Squat sauté",desc:"Explosion vers le haut. Puissance.",reps:"3×8",recup:"35s"},
+      {b:3,nom:"🎮 Circuit force/vitesse",desc:"5 squats sautés + sprint 20m + 5 pompes. 3 tours chrono.",reps:"3 tours",recup:"1 min",tag:"DÉFI"},
+      {b:4,nom:"Sprint 40m",desc:"Sprint long, maintenir jusqu'au bout.",reps:"5×40m",recup:"1 min"},
+      {b:4,nom:"Burpee",desc:"Force + cardio + coordination.",reps:"3×6",recup:"45s"},
+      {b:4,nom:"🎮 Record perso",desc:"Sprint 60m chronométré. Battre le record de la semaine 1 !",reps:"2 essais",recup:"2 min",tag:"DÉFI"},
+    ],
+  },
+  combat:{
+    A:[
+      {b:1,nom:"Course légère 8 min",desc:"Cardio base de tout combat.",reps:"8 min",recup:null},
+      {b:1,nom:"Déplacement en garde",desc:"Pieds dans l'axe, se déplacer en conservant la position de garde.",reps:"3×30s",recup:"20s"},
+      {b:1,nom:"Rotation des hanches",desc:"Mains sur les hanches, rotation complète. Mobilité du bassin.",reps:"3×20",recup:"15s"},
+      {b:1,nom:"🎮 Ombre imaginaire",desc:"Le parent joue l'adversaire en slow motion. L'enfant esquive.",reps:"3×30s",recup:"20s",tag:"FUN"},
+      {b:2,nom:"Fractionné 30s/30s",desc:"30s effort + 30s récup. L'effort de combat est intermittent.",reps:"6 cycles",recup:null},
+      {b:2,nom:"Chute arrière simulée",desc:"S'asseoir en roulant sur le dos, bras tendus pour amortir.",reps:"10×",recup:"20s"},
+      {b:2,nom:"🎮 Miroir combat",desc:"Parent fait des mouvements de garde, l'enfant copie en miroir.",reps:"4×30s",recup:"20s",tag:"FUN"},
+      {b:3,nom:"Fartlek combat",desc:"1 min allure + 20s sprint + 1 min allure. 5 cycles.",reps:"5 cycles",recup:null},
+      {b:3,nom:"Souplesse axiale",desc:"Assis jambes écartées, se pencher vers chaque pied.",reps:"3×30s/côté",recup:"15s"},
+      {b:3,nom:"🎮 Réaction directionnelle",desc:"Parent pointe → l'enfant sprinte 3m immédiatement. 15 réactions.",reps:"15×",recup:"20s",tag:"DÉFI"},
+      {b:4,nom:"Circuit cardio combat",desc:"30s genoux hauts + 30s déplacements + 30s pompes + 30s repos. 5 tours.",reps:"5 tours",recup:"30s"},
+      {b:4,nom:"Équilibre en garde",desc:"Position de garde yeux fermés. Proprioception.",reps:"3×20s",recup:"15s"},
+      {b:4,nom:"🎮 Défi cardio",desc:"Qui tient le plus longtemps en chaise imaginaire (90°) ?",reps:"3 essais",recup:"30s",tag:"DÉFI"},
+    ],
+    B:[
+      {b:1,nom:"Sprint départ bas",desc:"Position basse, genoux fléchis. Signal → explosion 8m.",reps:"8×8m",recup:"40s"},
+      {b:1,nom:"Pompes genoux",desc:"Descente 2s, poussée explosive.",reps:"3×6",recup:"30s"},
+      {b:1,nom:"Gainage planche",desc:"Foundation de toute technique de combat.",reps:"4×20s",recup:"20s"},
+      {b:1,nom:"🎮 Résistance bras",desc:"Face à face, pousser les mains de l'autre. Qui cède ?",reps:"4×10s",recup:"20s",tag:"FUN"},
+      {b:2,nom:"Pompes explosives",desc:"Descente lente 2s, montée explosive.",reps:"3×6",recup:"35s"},
+      {b:2,nom:"Squat sauté",desc:"Amplitude complète, explosion vers le haut.",reps:"3×8",recup:"35s"},
+      {b:2,nom:"🎮 Sumo imaginaire",desc:"Dans un cercle de 2m, faire sortir l'autre sans contact brutal.",reps:"5 rounds",recup:"20s",tag:"FUN"},
+      {b:3,nom:"Sprint + arrêt brutal",desc:"Sprint 10m, stop total au signal.",reps:"8×10m",recup:"40s"},
+      {b:3,nom:"Fentes explosives",desc:"Fente avant explosive, alterner rapidement.",reps:"3×10/jambe",recup:"35s"},
+      {b:3,nom:"🎮 Défi force",desc:"Chaise imaginaire. Qui tient le plus longtemps ?",reps:"3 essais",recup:"30s",tag:"DÉFI"},
+      {b:4,nom:"Burpee complet",desc:"Sol → pompe → relevé → saut.",reps:"3×6",recup:"45s"},
+      {b:4,nom:"Sprint départ sol",desc:"Couché au sol, signal → se lever et sprint 10m.",reps:"6×10m",recup:"40s"},
+      {b:4,nom:"🎮 Circuit max",desc:"1 min de burpees. Compter les répétitions !",reps:"3 essais",recup:"1 min",tag:"DÉFI"},
+    ],
+  },
+  gym:{
+    A:[
+      {b:1,nom:"Marche artistique",desc:"Sur la pointe des pieds, bras tendus, regard loin. Grâce et posture.",reps:"3×20m",recup:"15s"},
+      {b:1,nom:"Roulade avant",desc:"Menton rentré, dos arrondi. Gainage tout au long.",reps:"8×",recup:"20s"},
+      {b:1,nom:"Équilibre arabesque",desc:"Un pied au sol, l'autre levé en arrière. Tenir la position.",reps:"3×15s/pied",recup:"15s"},
+      {b:1,nom:"🎮 Statuette",desc:"Parent dit STOP → l'enfant s'immobilise dans n'importe quelle position.",reps:"10×",recup:"10s",tag:"FUN"},
+      {b:2,nom:"Roulade arrière",desc:"S'asseoir en arrière, rouler sur le dos, jambes passent au-dessus.",reps:"6×",recup:"25s"},
+      {b:2,nom:"Pont arrière statique",desc:"Mains et pieds au sol, ventre vers le ciel.",reps:"3×15s",recup:"20s"},
+      {b:2,nom:"🎮 Chorégraphie impro",desc:"Inventer une mini-chorégraphie de 4 mouvements ensemble.",reps:"1×",recup:null,tag:"FUN"},
+      {b:3,nom:"Roue latérale initiation",desc:"Partir de côté, poser les mains, jambes passent au-dessus.",reps:"6 tentatives",recup:"30s"},
+      {b:3,nom:"Sauts coordination",desc:"Pieds joints → pieds écartés → jambes croisées → retour.",reps:"3×20s",recup:"20s"},
+      {b:3,nom:"🎮 Défi souplesse",desc:"Qui arrive le plus bas dans un grand écart progressif ?",reps:"3 essais",recup:"20s",tag:"DÉFI"},
+      {b:4,nom:"Combinaison sol",desc:"Roulade avant + saut + roulade arrière. Sans pause.",reps:"5×",recup:"30s"},
+      {b:4,nom:"Séquence rythmée",desc:"6 gestes sur un rythme. Parent frappe dans les mains.",reps:"4×",recup:"20s"},
+      {b:4,nom:"🎮 Spectacle maison",desc:"Préparer une mini-prestation de 30s ensemble !",reps:"1×",recup:null,tag:"FUN"},
+    ],
+    B:[
+      {b:1,nom:"Gainage planche",desc:"En gym, la posture est tout.",reps:"3×25s",recup:"20s"},
+      {b:1,nom:"Squat bras tendus",desc:"Descente contrôlée, bras tendus horizontaux.",reps:"3×10",recup:"25s"},
+      {b:1,nom:"Sauts en hauteur",desc:"Genoux vers la poitrine. Réception souple.",reps:"3×8",recup:"30s"},
+      {b:1,nom:"🎮 Défi équilibre",desc:"Sur un pied, yeux fermés. Qui tient le plus longtemps ?",reps:"5 essais",recup:"15s",tag:"DÉFI"},
+      {b:2,nom:"Pompes",desc:"Force du haut du corps pour les appuis en gym.",reps:"3×6",recup:"30s"},
+      {b:2,nom:"Squat sauté atterrissage parfait",desc:"Saut → atterrissage silencieux en position stable.",reps:"3×8",recup:"30s"},
+      {b:2,nom:"🎮 Saut le plus haut",desc:"Saut vertical max. Marquer la hauteur sur un mur.",reps:"3 essais",recup:"30s",tag:"DÉFI"},
+      {b:3,nom:"Superman",desc:"Ventre au sol, lever bras et jambes opposés. Force du dos.",reps:"3×10",recup:"25s"},
+      {b:3,nom:"Rotation trunk",desc:"Assis en V, pieds levés, rotation droite/gauche.",reps:"3×12/côté",recup:"25s"},
+      {b:3,nom:"🎮 Circuit gymnatique",desc:"5 sauts + 5 roulades + 5 pompes. 3 tours chrono.",reps:"3 tours",recup:"1 min",tag:"DÉFI"},
+      {b:4,nom:"Planche complexe",desc:"Planche → monter sur les mains → revenir. Répéter.",reps:"3×6",recup:"30s"},
+      {b:4,nom:"Gainage complet dynamique",desc:"Planche → latérale G → planche → latérale D → retour.",reps:"3×",recup:"30s"},
+      {b:4,nom:"🎮 Force défi",desc:"Qui fait le plus de pompes parfaites ? Mêmes règles.",reps:"1 défi",recup:"1 min",tag:"DÉFI"},
+    ],
+  },
+  natation:{
+    A:[
+      {b:1,nom:"Course légère 8 min",desc:"Cardio terrestre pour compléter la natation.",reps:"8 min",recup:null},
+      {b:1,nom:"Rotations d'épaules",desc:"Grands cercles avant puis arrière, bras tendus.",reps:"3×15/sens",recup:"15s"},
+      {b:1,nom:"🎮 Départ plongeon simulé",desc:"Sauter depuis debout en projetant les bras en avant.",reps:"8×",recup:"20s",tag:"FUN"},
+      {b:2,nom:"Fartlek terrestre 12 min",desc:"1 min allure + 30s sprint + 1 min allure.",reps:"5 cycles",recup:null},
+      {b:2,nom:"Mobilité chevilles",desc:"Rotations de cheville dans les deux sens.",reps:"3×20/sens",recup:"10s"},
+      {b:2,nom:"🎮 Aquathlon imaginaire",desc:"Course 3 min + 10 sautillements + course 3 min.",reps:"2×",recup:"1 min",tag:"FUN"},
+      {b:3,nom:"Circuit cardio",desc:"2 min course + 30s genoux hauts + 2 min course.",reps:"3 circuits",recup:"1 min"},
+      {b:3,nom:"Rotation des bras en marche",desc:"Marcher en faisant des grands cercles de bras alternatifs. Simulation crawl.",reps:"4×20m",recup:"20s"},
+      {b:3,nom:"🎮 Défi souffle",desc:"Expirer lentement en comptant. Qui expire le plus longtemps ?",reps:"3 essais",recup:"30s",tag:"DÉFI"},
+      {b:4,nom:"Fractionné terrestre",desc:"Sprint 30s + marche 30s. 6 cycles.",reps:"6 cycles",recup:null},
+      {b:4,nom:"Équilibre extension",desc:"Sur un pied, bras en avant (position plongeon). Tenir stable.",reps:"3×20s/pied",recup:"15s"},
+      {b:4,nom:"🎮 Circuit nageur",desc:"10 rotations épaules + 10 sauts + sprint 20m. 4 tours.",reps:"4 tours",recup:"1 min",tag:"DÉFI"},
+    ],
+    B:[
+      {b:1,nom:"Gainage planche",desc:"Position de nage sur terre.",reps:"4×20s",recup:"20s"},
+      {b:1,nom:"Superman",desc:"Force du dos = position de nage.",reps:"3×10",recup:"25s"},
+      {b:1,nom:"Pont fessier",desc:"Hanches vers le ciel. Force de propulsion.",reps:"3×10",recup:"25s"},
+      {b:1,nom:"🎮 Saut longueur",desc:"Saut en longueur. 3 essais chacun.",reps:"3 essais",recup:"30s",tag:"FUN"},
+      {b:2,nom:"Planche + levée de bras",desc:"En planche, lever un bras tendu, tenir 3s, alterner.",reps:"3×8/bras",recup:"25s"},
+      {b:2,nom:"Squat",desc:"Force des jambes = propulsion.",reps:"3×10",recup:"30s"},
+      {b:2,nom:"🎮 Défi saut",desc:"Saut vertical, marquer la hauteur sur un mur.",reps:"3 essais",recup:"30s",tag:"DÉFI"},
+      {b:3,nom:"Gainage complexe",desc:"Planche → latérale → planche → latérale inverse.",reps:"4 tours",recup:"30s"},
+      {b:3,nom:"Superman dynamique",desc:"Lever bras/jambes opposés en alternance rapide.",reps:"3×15",recup:"25s"},
+      {b:3,nom:"🎮 Circuit nageur force",desc:"10 supermans + 10 ponts + 10 pompes. 3 tours.",reps:"3 tours",recup:"1 min",tag:"DÉFI"},
+      {b:4,nom:"Squat sauté",desc:"Explosion vers le haut. Propulsion des jambes.",reps:"3×8",recup:"35s"},
+      {b:4,nom:"Rotation trunk",desc:"Assis en V, pieds levés. Gainage oblique.",reps:"3×12/côté",recup:"25s"},
+      {b:4,nom:"🎮 Record gainage",desc:"Qui tient le plus longtemps en planche ?",reps:"3 essais",recup:"1 min",tag:"DÉFI"},
+    ],
+  },
+  generaliste:{
+    A:[
+      {b:1,nom:"Marche rapide 5 min",desc:"Échauffement ensemble. Bras actifs, regard droit.",reps:"5 min",recup:null},
+      {b:1,nom:"Course légère 5 min",desc:"Allure très confortable. On peut chanter en courant.",reps:"5 min",recup:null},
+      {b:1,nom:"🎮 Chat et souris",desc:"Le parent court, l'enfant essaie de le toucher.",reps:"3×1 min",recup:"30s",tag:"FUN"},
+      {b:2,nom:"Course continue 10 min",desc:"Avancer ensemble, pas de compétition.",reps:"10 min",recup:null},
+      {b:2,nom:"Slalom imaginaire",desc:"10 pas à gauche, 10 à droite en zigzag.",reps:"5 passages",recup:"25s"},
+      {b:2,nom:"🎮 Miroir",desc:"Copier tous les mouvements du parent. Changement de rôle.",reps:"4×30s",recup:"20s",tag:"FUN"},
+      {b:3,nom:"Fartlek 12 min",desc:"1 min allure + 30s rapide + 1 min allure.",reps:"5 cycles",recup:null},
+      {b:3,nom:"Parcours imaginaire",desc:"Créer un parcours : sprint → roulade → saut sur un pied → retour.",reps:"4×",recup:"1 min"},
+      {b:3,nom:"🎮 Course poursuite",desc:"3m d'avance au parent. L'enfant doit le rattraper avant 20m.",reps:"6×",recup:"40s",tag:"DÉFI"},
+      {b:4,nom:"Circuit cardio",desc:"2 min course + 10 sauts + 10 genoux hauts + 2 min course.",reps:"3 tours",recup:"1 min"},
+      {b:4,nom:"Fractionné fun",desc:"30s course + 30s danse + 30s course. Alterner.",reps:"5 cycles",recup:null},
+      {b:4,nom:"🎮 Olympiades maison",desc:"3 épreuves inventées ensemble. On vote et on s'affronte !",reps:"3 épreuves",recup:null,tag:"FUN"},
+    ],
+    B:[
+      {b:1,nom:"Sauts sur place",desc:"Sauts pieds joints, légers. Réveiller les jambes.",reps:"3×15",recup:"20s"},
+      {b:1,nom:"Gainage planche",desc:"Corps droit comme une planche.",reps:"3×20s",recup:"20s"},
+      {b:1,nom:"Squats",desc:"Comme s'asseoir sur une chaise imaginaire.",reps:"3×8",recup:"25s"},
+      {b:1,nom:"🎮 Défi saut",desc:"Saut en longueur. Qui saute le plus loin ?",reps:"3 essais",recup:"20s",tag:"DÉFI"},
+      {b:2,nom:"Sprint 10m",desc:"3… 2… 1… PARTEZ !",reps:"6×10m",recup:"30s"},
+      {b:2,nom:"Pompes genoux",desc:"Lent à la descente, explosif à la montée.",reps:"3×6",recup:"30s"},
+      {b:2,nom:"🎮 Réaction GO",desc:"Parent dit GO de façon aléatoire → sprint immédiat.",reps:"10×",recup:"30s",tag:"DÉFI"},
+      {b:3,nom:"Sprint 15m",desc:"Distance progressive.",reps:"6×15m",recup:"40s"},
+      {b:3,nom:"Fentes marchées",desc:"Grand pas avant, alterner.",reps:"3×8/jambe",recup:"30s"},
+      {b:3,nom:"🎮 Circuit famille",desc:"5 squats + 5 sauts + 5 pompes. 3 tours chrono.",reps:"3 tours",recup:"1 min",tag:"DÉFI"},
+      {b:4,nom:"Navette 10m",desc:"Sprint, demi-tour rapide, retour.",reps:"6 navettes",recup:"35s"},
+      {b:4,nom:"Burpee simplifié",desc:"Sol → debout → saut. Sans pompe.",reps:"3×5",recup:"40s"},
+      {b:4,nom:"🎮 Grand défi final",desc:"Inventer le défi ultime parent vs enfant !",reps:"1 défi",recup:null,tag:"FUN"},
+    ],
+  },
+};
+
+const EXOS_DUO=[
+  {nom:"🤝 Sprint côte à côte",desc:"Sprint 15m en même temps. Départ main dans la main, lâcher au GO.",reps:"5×",tag:"DUO"},
+  {nom:"🤝 Squat synchronisé",desc:"Face à face, mains dans les mains. Descente et montée au même rythme.",reps:"3×10",tag:"DUO"},
+  {nom:"🤝 Course en duo liée",desc:"Courir ensemble à la même allure. Si l'un accélère, l'autre suit.",reps:"4 min",tag:"DUO"},
+  {nom:"🤝 Gainage face à face",desc:"En planche, se regarder dans les yeux. Tenir ensemble sans rire !",reps:"3×25s",tag:"DUO"},
+  {nom:"🤝 Relais 20m",desc:"Un sprinte 20m, l'autre attend et repart au toucher de main.",reps:"6 relais",tag:"DUO"},
+  {nom:"🤝 Miroir parfait",desc:"Un fait des mouvements lents, l'autre copie en miroir exact.",reps:"3×30s",tag:"DUO"},
+];
+
+const ECHAUFF=[
+  {nom:"🔥 Marche rapide",desc:"2 minutes pour activer le cœur et les articulations.",reps:"2 min",recup:null,tag:"ÉCHO"},
+  {nom:"🔥 Rotations des bras",desc:"Grands cercles avant puis arrière. Mobiliser les épaules.",reps:"10/sens",recup:null,tag:"ÉCHO"},
+  {nom:"🔥 Rotation des hanches",desc:"Mains sur les hanches, cercles larges. Activer le bassin.",reps:"10/sens",recup:null,tag:"ÉCHO"},
+  {nom:"🔥 Genoux hauts",desc:"Lever les genoux alternativement à 90°. Activer les fléchisseurs.",reps:"20 pas",recup:null,tag:"ÉCHO"},
+  {nom:"🔥 Talons-fesses",desc:"Ramener les talons vers les fesses en marchant.",reps:"20 pas",recup:null,tag:"ÉCHO"},
+];
+
+const RETOUR_CALME=[
+  {nom:"🧘 Étirement quadriceps",desc:"Debout sur un pied, ramener le talon vers les fesses. 20s.",reps:"20s/jambe",recup:null,tag:"RETOUR"},
+  {nom:"🧘 Étirement ischio",desc:"Assis, jambes tendues, se pencher vers les pieds. 20s.",reps:"20s",recup:null,tag:"RETOUR"},
+  {nom:"🧘 Respiration profonde",desc:"Inspirer 4 temps, bloquer 2, expirer 6. Récupérer.",reps:"5 respirations",recup:null,tag:"RETOUR"},
+];
+
+function genProgramme(sport, objsEnfant, style, pathosE, pathosP, rules, semaine, duree, relation) {
+  const bloc = semaine<=8?1:semaine<=16?2:semaine<=24?3:4;
+  const sportKey = BANQUE[sport]?sport:"generaliste";
+  const banque = BANQUE[sportKey];
+  const asthme = pathosE.includes("Asthme");
+  const genouxE = pathosE.includes("Genoux fragiles");
+
+  let poolA = banque.A.filter(e=>e.b===bloc);
+  let poolB = banque.B.filter(e=>e.b===bloc);
+
+  if(asthme){
+    poolA=poolA.filter(e=>!e.nom.toLowerCase().includes("sprint"));
+    poolB=poolB.filter(e=>!e.nom.toLowerCase().includes("sprint"));
+  }
+  if(genouxE){
+    poolB=poolB.filter(e=>!e.nom.toLowerCase().includes("sauté")&&!e.nom.toLowerCase().includes("saut"));
+  }
+
+  const duoIdx=(semaine-1)%EXOS_DUO.length;
+  const duoEx=EXOS_DUO[duoIdx];
+
+  return {
+    seanceA:[...ECHAUFF,...poolA,duoEx,...RETOUR_CALME],
+    seanceB:[...ECHAUFF,...poolB,duoEx,...RETOUR_CALME],
+    bloc,
+  };
+}
 const RELATIONS=[
   {id:"pere_fils",   label:"Papa & Fils",      icons:"👨‍👦",col:P.sky},
   {id:"pere_fille",  label:"Papa & Fille",     icons:"👨‍👧",col:P.pink},
@@ -1050,6 +1331,37 @@ function NutritionTab({objParent}){
 }
 
 // ═══════════════════════════════════════════════════════════
+// EXERCICE CARD — pour l'affichage programme
+// ═══════════════════════════════════════════════════════════
+function ExCard({ex,idx,col}){
+  const [open,setOpen]=useState(false);
+  const tagColors={
+    "ÉCHO":"#FFD93D","RETOUR":"#A78BFA","DUO":"#38C9F0",
+    "FUN":"#3DDC84","DÉFI":"#FF9F43","PROGRESSION":"#FF6B6B",
+  };
+  const tagCol=ex.tag?tagColors[ex.tag]||col:col;
+  const isEcho=ex.tag==="ÉCHO";
+  const isRetour=ex.tag==="RETOUR";
+  return(
+    <div style={{background:P.navyL,border:`1.5px solid ${isEcho?"#FFD93D33":isRetour?"#A78BFA33":`${col}33`}`,borderRadius:14,marginBottom:8,overflow:"hidden"}}>
+      <div onClick={()=>setOpen(o=>!o)} style={{padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:28,height:28,borderRadius:"50%",background:tagCol+"22",border:`1px solid ${tagCol}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:tagCol,flexShrink:0}}>{idx+1}</div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:13,color:P.white}}>{ex.nom}</div>
+          <div style={{fontSize:11,color:P.gray,marginTop:1}}>{ex.reps}{ex.recup?` · Récup ${ex.recup}`:""}</div>
+        </div>
+        {ex.tag&&<div style={{background:tagCol+"22",border:`1px solid ${tagCol}44`,borderRadius:6,padding:"2px 8px",fontSize:9,color:tagCol,fontWeight:700,letterSpacing:1}}>{ex.tag}</div>}
+        <span style={{color:P.gray,fontSize:12}}>{open?"▲":"▼"}</span>
+      </div>
+      {open&&<div style={{padding:"0 16px 14px",borderTop:`1px solid ${P.navyLL}`}}>
+        <div style={{fontSize:13,color:P.offW,lineHeight:1.6,paddingTop:10}}>{ex.desc}</div>
+        {ex.adapte&&<div style={{marginTop:8,background:P.coral+"18",border:`1px solid ${P.coral}33`,borderRadius:8,padding:"6px 10px",fontSize:11,color:P.coral}}>{ex.adapte}</div>}
+      </div>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // APP PRINCIPALE
 // ═══════════════════════════════════════════════════════════
 export default function FitFamilyApp(){
@@ -1080,15 +1392,17 @@ export default function FitFamilyApp(){
   const semComp=semaines.filter(s=>s.complete).length;
   const tropheesOk=TROPHEES.filter(t=>t.s<=semComp&&t.s<=p.duree);
 
+  const progRef=useRef(null);
+
   function genProg(){
     const rules=ageRules||getAgeRules(8);
     const sw=Array.from({length:p.duree},(_,i)=>({
       semaine:i+1,
-      exA:genProgramme(p.sport,p.enfantObjectifs,p.style,p.enfantPathos,p.parentPathos,rules,i+1,p.duree,p.relation),
-      exB:genProgramme(p.sport,[...p.enfantObjectifs].reverse(),p.style==="ludique"?"structure":p.style==="structure"?"ludique":p.style,p.enfantPathos,p.parentPathos,rules,i+1,p.duree,p.relation),
+      ...genProgramme(p.sport,p.enfantObjectifs,p.style,p.enfantPathos,p.parentPathos,rules,i+1,p.duree,p.relation),
       complete:false,
     }));
-    setSemaines(sw);setProg(true);setTab("programme");
+    setSemaines(sw);setProg(true);setSemCourante(0);setTab("programme");
+    setTimeout(()=>{window.scrollTo({top:0,behavior:"smooth"});},100);
   }
 
   function marquer(i){setSemaines(prev=>prev.map((s,j)=>j===i?{...s,complete:true}:s));}
@@ -1235,6 +1549,10 @@ export default function FitFamilyApp(){
 
         <Card col={P.sun}><CH icon="🧑" title="Le parent" sub="Profil et objectifs" col={P.sun}/>
           <div style={{padding:"16px 18px"}}>
+            <div style={{marginBottom:12}}>
+              <label style={{fontSize:10,color:P.gray,letterSpacing:1,textTransform:"uppercase",marginBottom:5,display:"block"}}>Prénom du parent</label>
+              <input style={INP} value={p.parentPrenom} onChange={e=>set("parentPrenom",e.target.value)} placeholder="Votre prénom"/>
+            </div>
             {/* Date naissance parent → âge auto */}
             <div style={{marginBottom:12}}>
               <label style={{fontSize:10,color:P.gray,letterSpacing:1,textTransform:"uppercase",marginBottom:5,display:"block"}}>📅 Date de naissance</label>
@@ -1302,26 +1620,58 @@ export default function FitFamilyApp(){
 
       {/* PROGRAMME */}
       {tab==="programme"&&<div>
-        <ST icon={sportObj?.icon||"🎯"} title="Programme Duo !" sub={`${sportObj?.icon} ${sportObj?.label} · ${p.duree} semaines`} col={P.grass}/>
+        <ST icon={sportObj?.icon||"🎯"} title="Programme Duo !" sub={`${sportObj?.label} · ${p.duree} semaines`} col={P.grass}/>
         {!prog?(<div style={{textAlign:"center",padding:40,color:P.gray}}><div style={{fontSize:48,marginBottom:12}}>⚙️</div><div style={{fontSize:15,marginBottom:20}}>Configurez d'abord vos profils !</div><button onClick={()=>setTab("profil")} style={{background:P.grass,color:"#fff",border:"none",borderRadius:12,padding:"13px 28px",fontSize:15,fontFamily:"'Fredoka One', cursive",cursor:"pointer"}}>Configurer →</button></div>):(<>
+          {/* Résumé duo */}
           <div style={{background:P.navyL,border:`1.5px solid ${P.navyLL}`,borderRadius:14,padding:"12px 18px",marginBottom:18,display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
             <span style={{fontSize:24}}>{rel.icons}</span>
             <div style={{flex:1}}>
-              <div style={{fontFamily:"'Fredoka One', cursive",fontSize:16,color:P.white}}>{p.enfantPrenom||"Enfant"} · {ageRules?.label||""} · {sportObj?.label}</div>
-              <div style={{color:P.gray,fontSize:11,marginTop:2}}>Objectifs : {p.enfantObjectifs.map(id=>OBJ_ENFANT.find(o=>o.id===id)?.icon+" "+OBJ_ENFANT.find(o=>o.id===id)?.label).join(" · ")}</div>
+              <div style={{fontFamily:"'Fredoka One', cursive",fontSize:16,color:P.white}}>{p.parentPrenom||"Parent"} & {p.enfantPrenom||"Enfant"} · {sportObj?.label}</div>
+              <div style={{color:P.gray,fontSize:11,marginTop:2}}>Bloc {semaines[semCourante]?.bloc||1}/4 · Semaine {semCourante+1}/{p.duree}</div>
             </div>
           </div>
+
+          {/* Navigation semaines */}
           <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:18}}>
             {semaines.map((s,i)=>(<button key={i} onClick={()=>setSemCourante(i)} style={{background:semCourante===i?P.grass:s.complete?P.grass+"22":P.navyLL,color:semCourante===i?"#fff":s.complete?P.grass:P.gray,border:`2px solid ${semCourante===i?P.grass:s.complete?P.grass+"55":"transparent"}`,borderRadius:10,padding:"7px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>S{i+1}{s.complete?" ✓":""}</button>))}
           </div>
+
+          {/* SEMAINE COURANTE — 2 séances uniquement */}
           {semaines[semCourante]&&<>
             <div style={{background:P.navyL,border:`1.5px solid ${P.navyLL}`,borderRadius:14,padding:"14px 18px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-              <div><div style={{fontFamily:"'Fredoka One', cursive",fontSize:22,color:P.grass}}>Semaine {semCourante+1} 💪</div><div style={{color:P.gray,fontSize:12,marginTop:2}}>{semCourante<Math.ceil(p.duree/2)?"Phase 1 — Construction des bases":"Phase 2 — On intensifie ! 🔥"}</div></div>
-              {!semaines[semCourante].complete?(<button onClick={()=>marquer(semCourante)} style={{background:P.grass,color:"#fff",border:"none",borderRadius:12,padding:"11px 18px",fontSize:14,fontFamily:"'Fredoka One', cursive",cursor:"pointer",boxShadow:`0 4px 16px ${P.grass}44`}}>✅ Semaine terminée !</button>):(<div style={{fontFamily:"'Fredoka One', cursive",fontSize:22,color:P.grass}}>🏅 Validée !</div>)}
+              <div>
+                <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22,color:P.grass}}>Semaine {semCourante+1} 💪</div>
+                <div style={{color:P.gray,fontSize:12,marginTop:2}}>Bloc {semaines[semCourante].bloc}/4 · {semCourante<Math.ceil(p.duree/2)?"Phase construction":"Phase intensification 🔥"}</div>
+              </div>
+              {!semaines[semCourante].complete?
+                <button onClick={()=>marquer(semCourante)} style={{background:P.grass,color:"#fff",border:"none",borderRadius:12,padding:"11px 18px",fontSize:14,fontFamily:"'Fredoka One', cursive",cursor:"pointer",boxShadow:`0 4px 16px ${P.grass}44`}}>✅ Semaine terminée !</button>:
+                <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22,color:P.grass}}>🏅 Validée !</div>
+              }
             </div>
-            <SeanceCard titre="Séance A" icon="⚡" objectif="Explosivité & Vivacité" exercices={semaines[semCourante].exA} col={sportObj?.col||P.grass} enfantPrenom={p.enfantPrenom} parentPrenom={p.parentPrenom}/>
-            <SeanceCard titre="Séance B" icon="🎯" objectif="Technique & Réactivité" exercices={semaines[semCourante].exB} col={P.sky} enfantPrenom={p.enfantPrenom} parentPrenom={p.parentPrenom}/>
-            {(p.enfantPathos.filter(x=>x!=="Aucune").length>0||p.parentPathos.filter(x=>x!=="Aucune").length>0)&&<div style={{background:"#1a0a0a",border:`1px solid ${P.coral}44`,borderRadius:12,padding:"14px 18px"}}><div style={{color:P.coral,fontSize:10,letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>⚠️ Adaptations santé actives</div>{p.enfantPathos.filter(x=>x!=="Aucune").map(ph=><div key={ph} style={{fontSize:12,color:P.gray,marginBottom:2}}>• Enfant — {ph} : exercices marqués ✓ adaptés</div>)}{p.parentPathos.filter(x=>x!=="Aucune").map(ph=><div key={ph} style={{fontSize:12,color:P.gray,marginBottom:2}}>• Parent — {ph} : exercices adaptés</div>)}</div>}
+
+            {/* SÉANCE A */}
+            <div style={{background:P.sky+"18",border:`1.5px solid ${P.sky}44`,borderRadius:14,padding:"12px 16px",marginBottom:10}}>
+              <div style={{fontFamily:"'Fredoka One', cursive",fontSize:18,color:P.sky,marginBottom:4}}>🏃 Séance A — Cardio & Technique</div>
+              <div style={{fontSize:11,color:P.gray}}>Endurance · Coordination · Jeux</div>
+            </div>
+            {semaines[semCourante].seanceA?.map((ex,i)=><ExCard key={i} ex={ex} idx={i} col={P.sky}/>)}
+
+            <div style={{height:16}}/>
+
+            {/* SÉANCE B */}
+            <div style={{background:P.coral+"18",border:`1.5px solid ${P.coral}44`,borderRadius:14,padding:"12px 16px",marginBottom:10}}>
+              <div style={{fontFamily:"'Fredoka One', cursive",fontSize:18,color:P.coral,marginBottom:4}}>⚡ Séance B — Vivacité & Force</div>
+              <div style={{fontSize:11,color:P.gray}}>Explosivité · Renforcement · Défis</div>
+            </div>
+            {semaines[semCourante].seanceB?.map((ex,i)=><ExCard key={i} ex={ex} idx={i} col={P.coral}/>)}
+
+            <div style={{height:20}}/>
+
+            {/* Navigation semaine suivante */}
+            <div style={{display:"flex",gap:10}}>
+              {semCourante>0&&<button onClick={()=>setSemCourante(s=>s-1)} style={{flex:1,background:P.navyL,border:`1px solid ${P.navyLL}`,borderRadius:12,padding:"12px",color:P.gray,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>← Semaine {semCourante}</button>}
+              {semCourante<semaines.length-1&&<button onClick={()=>setSemCourante(s=>s+1)} style={{flex:1,background:P.grass,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontSize:14,cursor:"pointer",fontFamily:"'Fredoka One', cursive"}}>Semaine {semCourante+2} →</button>}
+            </div>
           </>}
         </>)}
       </div>}
