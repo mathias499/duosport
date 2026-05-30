@@ -1,5 +1,114 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { supabase } from './supabase.js';
+
+// ═══════════════════════════════════════════════════════════
+// AUTH — Écran inscription / connexion
+// ═══════════════════════════════════════════════════════════
+function AuthScreen({onAuth}){
+  const [mode,setMode]=useState("login"); // "login" | "signup"
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const [success,setSuccess]=useState("");
+
+  const PA={background:"#1A1F3C",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px",fontFamily:"'DM Sans',sans-serif",color:"#F0F4FF"};
+  const CARD={background:"#242947",border:"1.5px solid #2E3460",borderRadius:24,padding:"32px 28px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px #00000040"};
+  const INP2={background:"#1A1F3C",border:"1.5px solid #2E3460",borderRadius:12,color:"#F0F4FF",padding:"13px 16px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit",marginTop:6};
+  const BTN={width:"100%",border:"none",borderRadius:14,padding:"16px",fontSize:16,fontFamily:"'Fredoka One', cursive",cursor:"pointer",letterSpacing:.5,marginTop:8};
+
+  async function handleSubmit(e){
+    e.preventDefault();
+    setError(""); setSuccess(""); setLoading(true);
+    try {
+      if(mode==="signup"){
+        const {data,error:err}=await supabase.auth.signUp({email,password});
+        if(err) throw err;
+        if(data.user && !data.session){
+          setSuccess("✅ Compte créé ! Vérifie ton email pour confirmer puis connecte-toi.");
+          setMode("login");
+        } else if(data.session){
+          onAuth(data.session.user);
+        }
+      } else {
+        const {data,error:err}=await supabase.auth.signInWithPassword({email,password});
+        if(err) throw err;
+        onAuth(data.user);
+      }
+    } catch(err){
+      const msg=err.message||"";
+      if(msg.includes("Invalid login"))setError("Email ou mot de passe incorrect.");
+      else if(msg.includes("Email not confirmed"))setError("Confirme ton email avant de te connecter.");
+      else if(msg.includes("already registered"))setError("Cet email est déjà utilisé. Connecte-toi !");
+      else if(msg.includes("Password should be"))setError("Le mot de passe doit faire au moins 6 caractères.");
+      else setError(msg||"Une erreur est survenue.");
+    }
+    setLoading(false);
+  }
+
+  return(
+    <div style={PA}>
+      <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+      {/* Logo */}
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{fontFamily:"'Fredoka One', cursive",fontSize:52,lineHeight:1,letterSpacing:2,marginBottom:8}}>
+          <span style={{color:"#FFD93D"}}>DUO</span><span style={{color:"#3DDC84"}}>SPORT</span>
+          <span style={{fontSize:36}}> 🏃</span>
+        </div>
+        <div style={{color:"#8892B0",fontSize:13,letterSpacing:1}}>Entraînement parent · enfant</div>
+      </div>
+
+      <div style={CARD}>
+        {/* Tabs */}
+        <div style={{display:"flex",background:"#1A1F3C",borderRadius:12,padding:4,marginBottom:28,gap:4}}>
+          {[["login","Se connecter"],["signup","Créer un compte"]].map(([m,l])=>(
+            <button key={m} onClick={()=>{setMode(m);setError("");setSuccess("");}} style={{flex:1,background:mode===m?"#3DDC84":"transparent",color:mode===m?"#fff":"#8892B0",border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:11,color:"#8892B0",letterSpacing:1,textTransform:"uppercase"}}>Email</label>
+            <input style={INP2} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="ton@email.com" required autoComplete="email"/>
+          </div>
+          <div style={{marginBottom:20}}>
+            <label style={{fontSize:11,color:"#8892B0",letterSpacing:1,textTransform:"uppercase"}}>Mot de passe</label>
+            <input style={INP2} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="6 caractères minimum" required autoComplete={mode==="signup"?"new-password":"current-password"}/>
+          </div>
+
+          {error&&<div style={{background:"#FF6B6B22",border:"1px solid #FF6B6B55",borderRadius:10,padding:"10px 14px",color:"#FF6B6B",fontSize:13,marginBottom:14}}>{error}</div>}
+          {success&&<div style={{background:"#3DDC8422",border:"1px solid #3DDC8455",borderRadius:10,padding:"10px 14px",color:"#3DDC84",fontSize:13,marginBottom:14}}>{success}</div>}
+
+          <button type="submit" disabled={loading} style={{...BTN,background:loading?"#2E3460":"linear-gradient(135deg,#3DDC84,#38C9F0)",color:"#fff",opacity:loading?.7:1}}>
+            {loading?"Chargement...":(mode==="signup"?"🚀 Créer mon compte":"🏃 Se connecter")}
+          </button>
+        </form>
+
+        {mode==="login"&&(
+          <div style={{textAlign:"center",marginTop:16}}>
+            <button onClick={async()=>{
+              if(!email){setError("Entre ton email d'abord.");return;}
+              setLoading(true);
+              const {error:err}=await supabase.auth.resetPasswordForEmail(email);
+              setLoading(false);
+              if(err)setError(err.message);
+              else setSuccess("Email de réinitialisation envoyé !");
+            }} style={{background:"none",border:"none",color:"#8892B0",fontSize:12,cursor:"pointer",fontFamily:"inherit",textDecoration:"underline"}}>
+              Mot de passe oublié ?
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div style={{color:"#8892B0",fontSize:11,marginTop:24,textAlign:"center",maxWidth:320,lineHeight:1.6}}>
+        En créant un compte, tu acceptes nos conditions d'utilisation.<br/>
+        Tes données sont sécurisées par Supabase.
+      </div>
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════
 // PALETTE
@@ -1219,10 +1328,28 @@ function ExCard({ex,idx,col}){
 // APP PRINCIPALE
 // ═══════════════════════════════════════════════════════════
 export default function FitFamilyApp(){
+  // ── AUTH STATE ──────────────────────────────────────────
+  const [user,setUser]=useState(null);
+  const [authLoading,setAuthLoading]=useState(true);
+
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data:{session}})=>{
+      setUser(session?.user||null);
+      setAuthLoading(false);
+    });
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+      setUser(session?.user||null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  // ── APP STATE ───────────────────────────────────────────
   const [tab,setTab]=useState("profil");
   const [semCourante,setSemCourante]=useState(0);
   const [semaines,setSemaines]=useState([]);
   const [prog,setProg]=useState(false);
+  const [profilSaved,setProfilSaved]=useState(false);
+  const [savingProfil,setSavingProfil]=useState(false);
   const [p,setP]=useState({
     relation:"pere_fils",
     enfantPrenom:"",enfantAge:"",enfantSexe:"garcon",enfantPoids:"",enfantTaille:"",
@@ -1234,10 +1361,85 @@ export default function FitFamilyApp(){
     style:"mixte",duree:8,
   });
 
+  // ── CHARGEMENT PROFIL depuis Supabase ───────────────────
+  useEffect(()=>{
+    if(!user)return;
+    async function loadProfil(){
+      const {data,error}=await supabase
+        .from("duosport_profils")
+        .select("*")
+        .eq("user_id",user.id)
+        .order("created_at",{ascending:false})
+        .limit(1)
+        .maybeSingle();
+      if(error||!data)return;
+      setP(prev=>({
+        ...prev,
+        relation:data.relation||prev.relation,
+        enfantPrenom:data.enfant_prenom||"",
+        enfantAge:data.enfant_age?String(data.enfant_age):"",
+        enfantPoids:data.enfant_poids||"",
+        enfantTaille:data.enfant_taille||"",
+        enfantObjectifs:data.enfant_objectifs?JSON.parse(data.enfant_objectifs):prev.enfantObjectifs,
+        enfantPathos:data.enfant_pathos?JSON.parse(data.enfant_pathos):[],
+        sport:data.sport||prev.sport,
+        parentPrenom:data.parent_prenom||"",
+        parentAge:data.parent_age?String(data.parent_age):"",
+        parentPoids:data.parent_poids||"",
+        parentTaille:data.parent_taille||"",
+        parentObjectifs:data.parent_objectifs?JSON.parse(data.parent_objectifs):prev.parentObjectifs,
+        parentPathos:data.parent_pathos?JSON.parse(data.parent_pathos):[],
+        style:data.style||prev.style,
+        duree:data.duree||prev.duree,
+      }));
+      setProfilSaved(true);
+    }
+    loadProfil();
+  },[user]);
+
+  // ── SAUVEGARDE PROFIL dans Supabase ─────────────────────
+  async function saveProfil(){
+    if(!user)return;
+    setSavingProfil(true);
+    const payload={
+      user_id:user.id,
+      relation:p.relation,
+      enfant_prenom:p.enfantPrenom,
+      enfant_age:parseInt(p.enfantAge)||null,
+      enfant_poids:p.enfantPoids,
+      enfant_taille:p.enfantTaille,
+      enfant_objectifs:JSON.stringify(p.enfantObjectifs),
+      enfant_pathos:JSON.stringify(p.enfantPathos),
+      sport:p.sport,
+      parent_prenom:p.parentPrenom,
+      parent_age:parseInt(p.parentAge)||null,
+      parent_poids:p.parentPoids,
+      parent_taille:p.parentTaille,
+      parent_objectifs:JSON.stringify(p.parentObjectifs),
+      parent_pathos:JSON.stringify(p.parentPathos),
+      style:p.style,
+      duree:p.duree,
+    };
+    const {data:existing}=await supabase
+      .from("duosport_profils")
+      .select("id")
+      .eq("user_id",user.id)
+      .limit(1)
+      .maybeSingle();
+    if(existing){
+      await supabase.from("duosport_profils").update(payload).eq("user_id",user.id);
+    } else {
+      await supabase.from("duosport_profils").insert(payload);
+    }
+    setSavingProfil(false);
+    setProfilSaved(true);
+  }
+
   function set(k,v){setP(prev=>({...prev,[k]:v}));}
   function togArr(key,val){setP(prev=>{const a=prev[key];if(a.includes(val))return a.length<=1?prev:{...prev,[key]:a.filter(x=>x!==val)};return{...prev,[key]:[...a,val]};});}
   function togPatho(who,val){const k=who==="enfant"?"enfantPathos":"parentPathos";setP(prev=>({...prev,[k]:prev[k].includes(val)?prev[k].filter(x=>x!==val):[...prev[k],val]}));}
 
+  // ── GUARD AUTH ──────────────────────────────────────────
   const ageRules=p.enfantAge?getAgeRules(parseInt(p.enfantAge)):null;
   const imcE=calcIMC(p.enfantPoids,p.enfantTaille);
   const imcP=calcIMC(p.parentPoids,p.parentTaille);
@@ -1245,8 +1447,18 @@ export default function FitFamilyApp(){
   const sportObj=SPORTS[p.sport];
   const semComp=semaines.filter(s=>s.complete).length;
   const tropheesOk=TROPHEES.filter(t=>t.s<=semComp&&t.s<=p.duree);
-
   const progRef=useRef(null);
+
+  const [burgerOpen,setBurgerOpen]=useState(false);
+
+  if(authLoading)return(
+    <div style={{background:"#1A1F3C",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet"/>
+      <div style={{fontFamily:"'Fredoka One', cursive",fontSize:42,letterSpacing:2}}><span style={{color:"#FFD93D"}}>DUO</span><span style={{color:"#3DDC84"}}>SPORT</span></div>
+      <div style={{color:"#8892B0",fontSize:13}}>Chargement...</div>
+    </div>
+  );
+  if(!user)return <AuthScreen onAuth={u=>setUser(u)}/>;
 
   function genProg(){
     const rules=ageRules||getAgeRules(8);
@@ -1274,7 +1486,6 @@ export default function FitFamilyApp(){
     {id:"trophees",  label:`🏆 Trophées${tropheesOk.length>0?` (${tropheesOk.length})`:""}`},
   ];
 
-  const [burgerOpen,setBurgerOpen]=useState(false);
 
   return(<div style={{background:P.navy,minHeight:"100vh",color:P.white,fontFamily:"'DM Sans',sans-serif"}}>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
@@ -1314,6 +1525,12 @@ export default function FitFamilyApp(){
           <div style={{fontSize:11,color:P.gray,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Progression</div>
           <div style={{height:6,background:P.navyLL,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",background:`linear-gradient(90deg,${P.grass},${P.sky})`,width:`${(semComp/Math.max(p.duree,1))*100}%`,transition:"width .4s",borderRadius:3}}/></div>
           <div style={{fontSize:11,color:P.gray,marginTop:6}}>{semComp}/{p.duree} semaines</div>
+        </div>
+        <div style={{padding:"16px 20px 0",marginTop:8,borderTop:`1px solid ${P.navyLL}`}}>
+          <div style={{fontSize:11,color:P.gray,marginBottom:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📧 {user?.email}</div>
+          <button onClick={async()=>{await supabase.auth.signOut();setBurgerOpen(false);}} style={{width:"100%",background:P.coral+"22",border:`1px solid ${P.coral}44`,borderRadius:10,padding:"10px 14px",color:P.coral,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
+            🚪 Se déconnecter
+          </button>
         </div>
       </div>
     </div>}
@@ -1466,6 +1683,11 @@ export default function FitFamilyApp(){
             </div>
           </div>
         </Card>
+
+        {/* Bouton Enregistrer le profil */}
+        <button onClick={saveProfil} disabled={savingProfil} style={{width:"100%",background:profilSaved?P.grass+"22":`linear-gradient(135deg,${P.sky},${P.purple})`,border:profilSaved?`2px solid ${P.grass}44`:"none",borderRadius:16,padding:"14px 28px",fontSize:15,fontFamily:"'Fredoka One', cursive",color:profilSaved?P.grass:"#fff",cursor:"pointer",letterSpacing:.5,marginBottom:12,opacity:savingProfil?.7:1,transition:"all .2s"}}>
+          {savingProfil?"⏳ Enregistrement...":(profilSaved?"✅ Profil enregistré — Modifier & sauvegarder":"💾 Enregistrer mon profil")}
+        </button>
 
         <button onClick={genProg} style={{width:"100%",background:`linear-gradient(135deg,${P.grass},${P.sky})`,border:"none",borderRadius:16,padding:"18px 28px",fontSize:18,fontFamily:"'Fredoka One', cursive",color:"#fff",cursor:"pointer",letterSpacing:1,boxShadow:`0 6px 30px ${P.grass}55`}}>
           🚀 Générer mon programme {p.duree} semaines !
