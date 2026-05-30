@@ -5,28 +5,35 @@ import { supabase } from './supabase.js';
 // AUTH — Écran inscription / connexion
 // ═══════════════════════════════════════════════════════════
 function AuthScreen({onAuth}){
-  const [mode,setMode]=useState("login"); // "login" | "signup"
+  const [mode,setMode]=useState("login");
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
+  const [confirm,setConfirm]=useState("");
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const [success,setSuccess]=useState("");
 
-  const PA={background:"#1A1F3C",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px",fontFamily:"'DM Sans',sans-serif",color:"#F0F4FF"};
-  const CARD={background:"#242947",border:"1.5px solid #2E3460",borderRadius:24,padding:"32px 28px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px #00000040"};
-  const INP2={background:"#1A1F3C",border:"1.5px solid #2E3460",borderRadius:12,color:"#F0F4FF",padding:"13px 16px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit",marginTop:6};
-  const BTN={width:"100%",border:"none",borderRadius:14,padding:"16px",fontSize:16,fontFamily:"'Fredoka One', cursive",cursor:"pointer",letterSpacing:.5,marginTop:8};
+  const PA={background:"#0F1320",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px",fontFamily:"'DM Sans',sans-serif",color:"#E8EDF8"};
+  const CARD={background:"#161C2E",border:"1px solid #ffffff0f",borderRadius:24,padding:"32px 28px",width:"100%",maxWidth:400,boxShadow:"0 20px 60px #00000060"};
+  const INP2={background:"#0F1320",border:"1.5px solid #ffffff0f",borderRadius:12,color:"#E8EDF8",padding:"13px 16px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit",marginTop:6};
+  const BTN={width:"100%",border:"none",borderRadius:14,padding:"16px",fontSize:15,fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,cursor:"pointer",letterSpacing:.3,marginTop:8};
+  const FONT="'Cabinet Grotesk',sans-serif";
 
   async function handleSubmit(e){
     e.preventDefault();
-    setError(""); setSuccess(""); setLoading(true);
+    setError(""); setSuccess("");
+    if(mode==="signup" && password!==confirm){
+      setError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    setLoading(true);
     try {
       if(mode==="signup"){
         const {data,error:err}=await supabase.auth.signUp({email,password});
         if(err) throw err;
         if(data.user && !data.session){
           setSuccess("✅ Compte créé ! Vérifie ton email pour confirmer puis connecte-toi.");
-          setMode("login");
+          setMode("login"); setConfirm("");
         } else if(data.session){
           onAuth(data.session.user);
         }
@@ -48,41 +55,47 @@ function AuthScreen({onAuth}){
 
   return(
     <div style={PA}>
-      <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
-      {/* Logo */}
+      <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
       <div style={{textAlign:"center",marginBottom:32}}>
-        <div style={{fontFamily:"'Fredoka One', cursive",fontSize:52,lineHeight:1,letterSpacing:2,marginBottom:8}}>
+        <div style={{fontFamily:FONT,fontWeight:900,fontSize:52,lineHeight:1,letterSpacing:-1,marginBottom:8}}>
           <span style={{color:"#FFD93D"}}>DUO</span><span style={{color:"#3DDC84"}}>SPORT</span>
           <span style={{fontSize:36}}> 🏃</span>
         </div>
-        <div style={{color:"#8892B0",fontSize:13,letterSpacing:1}}>Entraînement parent · enfant</div>
+        <div style={{color:"#8892B0",fontSize:13,letterSpacing:.5}}>Entraînement parent · enfant</div>
       </div>
 
       <div style={CARD}>
-        {/* Tabs */}
-        <div style={{display:"flex",background:"#1A1F3C",borderRadius:12,padding:4,marginBottom:28,gap:4}}>
+        <div style={{display:"flex",background:"#0F1320",borderRadius:12,padding:4,marginBottom:28,gap:4}}>
           {[["login","Se connecter"],["signup","Créer un compte"]].map(([m,l])=>(
-            <button key={m} onClick={()=>{setMode(m);setError("");setSuccess("");}} style={{flex:1,background:mode===m?"#3DDC84":"transparent",color:mode===m?"#fff":"#8892B0",border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+            <button key={m} onClick={()=>{setMode(m);setError("");setSuccess("");setConfirm("");}} style={{flex:1,background:mode===m?"#3DDC84":"transparent",color:mode===m?"#fff":"#8892B0",border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
               {l}
             </button>
           ))}
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{marginBottom:16}}>
-            <label style={{fontSize:11,color:"#8892B0",letterSpacing:1,textTransform:"uppercase"}}>Email</label>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:11,color:"#8892B0",letterSpacing:1,textTransform:"uppercase",fontFamily:FONT}}>Email</label>
             <input style={INP2} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="ton@email.com" required autoComplete="email"/>
           </div>
-          <div style={{marginBottom:20}}>
-            <label style={{fontSize:11,color:"#8892B0",letterSpacing:1,textTransform:"uppercase"}}>Mot de passe</label>
+          <div style={{marginBottom:mode==="signup"?14:20}}>
+            <label style={{fontSize:11,color:"#8892B0",letterSpacing:1,textTransform:"uppercase",fontFamily:FONT}}>Mot de passe</label>
             <input style={INP2} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="6 caractères minimum" required autoComplete={mode==="signup"?"new-password":"current-password"}/>
           </div>
+          {mode==="signup"&&(
+            <div style={{marginBottom:20}}>
+              <label style={{fontSize:11,color:"#8892B0",letterSpacing:1,textTransform:"uppercase",fontFamily:FONT}}>Confirmer le mot de passe</label>
+              <input style={{...INP2,borderColor:confirm&&confirm!==password?"#FF6B6B66":confirm&&confirm===password?"#3DDC8466":"#ffffff0f"}} type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Répète ton mot de passe" required/>
+              {confirm&&confirm===password&&<div style={{fontSize:11,color:"#3DDC84",marginTop:4}}>✓ Mots de passe identiques</div>}
+              {confirm&&confirm!==password&&<div style={{fontSize:11,color:"#FF6B6B",marginTop:4}}>✗ Mots de passe différents</div>}
+            </div>
+          )}
 
-          {error&&<div style={{background:"#FF6B6B22",border:"1px solid #FF6B6B55",borderRadius:10,padding:"10px 14px",color:"#FF6B6B",fontSize:13,marginBottom:14}}>{error}</div>}
-          {success&&<div style={{background:"#3DDC8422",border:"1px solid #3DDC8455",borderRadius:10,padding:"10px 14px",color:"#3DDC84",fontSize:13,marginBottom:14}}>{success}</div>}
+          {error&&<div style={{background:"#FF6B6B18",border:"1px solid #FF6B6B44",borderRadius:10,padding:"10px 14px",color:"#FF6B6B",fontSize:13,marginBottom:14}}>{error}</div>}
+          {success&&<div style={{background:"#3DDC8418",border:"1px solid #3DDC8444",borderRadius:10,padding:"10px 14px",color:"#3DDC84",fontSize:13,marginBottom:14}}>{success}</div>}
 
-          <button type="submit" disabled={loading} style={{...BTN,background:loading?"#2E3460":"linear-gradient(135deg,#3DDC84,#38C9F0)",color:"#fff",opacity:loading?.7:1}}>
-            {loading?"Chargement...":(mode==="signup"?"🚀 Créer mon compte":"🏃 Se connecter")}
+          <button type="submit" disabled={loading} style={{...BTN,background:loading?"#1E2540":"linear-gradient(135deg,#3DDC84,#38C9F0)",color:"#fff",opacity:loading?.7:1}}>
+            {loading?"Chargement...":(mode==="signup"?"🚀 Créer mon compte":"Se connecter →")}
           </button>
         </form>
 
@@ -101,10 +114,8 @@ function AuthScreen({onAuth}){
           </div>
         )}
       </div>
-
       <div style={{color:"#8892B0",fontSize:11,marginTop:24,textAlign:"center",maxWidth:320,lineHeight:1.6}}>
-        En créant un compte, tu acceptes nos conditions d'utilisation.<br/>
-        Tes données sont sécurisées par Supabase.
+        Tes données sont sécurisées par Supabase 🔒
       </div>
     </div>
   );
@@ -758,9 +769,9 @@ function Toggle({icon,label,col,active,onClick}){
     <span>{icon}</span>{label}{active&&<span style={{marginLeft:4,fontSize:9,background:col,color:"#fff",borderRadius:4,padding:"1px 5px"}}>✓</span>}
   </button>);
 }
-function Card({children,col,style:xs}){return(<div style={{background:P.navyL,border:`1.5px solid ${col?col+"44":P.navyLL}`,borderRadius:20,marginBottom:16,overflow:"hidden",boxShadow:col?`0 4px 24px ${col}18`:"none",...xs}}>{children}</div>);}
-function CH({icon,title,sub,col}){return(<div style={{background:`linear-gradient(90deg,${col}28,transparent)`,borderLeft:`4px solid ${col}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:12,borderBottom:`1px solid ${P.navyLL}`}}><span style={{fontSize:28}}>{icon}</span><div><div style={{fontFamily:"'Fredoka One', cursive",fontSize:20,color:col,letterSpacing:.5}}>{title}</div>{sub&&<div style={{color:P.gray,fontSize:11}}>{sub}</div>}</div></div>);}
-function ST({icon,title,sub,col}){return(<div style={{marginBottom:18}}><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}><span style={{fontSize:26}}>{icon}</span><div style={{fontFamily:"'Fredoka One', cursive",fontSize:26,color:col||P.white,letterSpacing:1}}>{title}</div></div>{sub&&<div style={{color:P.gray,fontSize:12,letterSpacing:1,paddingLeft:36}}>{sub}</div>}</div>);}
+function Card({children,col,style:xs}){return(<div style={{background:"#1E2540",border:`1px solid ${col?col+"33":"#ffffff0f"}`,borderRadius:20,marginBottom:16,overflow:"hidden",boxShadow:col?`0 4px 24px ${col}12`:"none",...xs}}>{children}</div>);}
+function CH({icon,title,sub,col}){return(<div style={{background:`linear-gradient(90deg,${col}18,transparent)`,borderLeft:`3px solid ${col}`,padding:"14px 18px",display:"flex",alignItems:"center",gap:12,borderBottom:`1px solid #ffffff0f`}}><span style={{fontSize:26}}>{icon}</span><div><div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:18,color:col,letterSpacing:-0.3}}>{title}</div>{sub&&<div style={{color:P.gray,fontSize:11,marginTop:2}}>{sub}</div>}</div></div>);}
+function ST({icon,title,sub,col}){return(<div style={{marginBottom:18}}><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}><span style={{fontSize:24}}>{icon}</span><div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:800,fontSize:24,color:col||P.white,letterSpacing:-0.5}}>{title}</div></div>{sub&&<div style={{color:P.gray,fontSize:12,letterSpacing:.5,paddingLeft:34}}>{sub}</div>}</div>);}
 
 // ═══════════════════════════════════════════════════════════
 // SÉANCE CARD
@@ -836,7 +847,19 @@ function LibreTab({p,PAL,Card,CH,ST,Toggle,INP}){
   const [historique,setHistorique]=useState([]);
   const [timerRef,setTimerRef]=useState(null);
   const [lieu,setLieu]=useState("");
+  const [photoFile,setPhotoFile]=useState(null);
+  const [photoPreview,setPhotoPreview]=useState(null);
+  const [uploadingPhoto,setUploadingPhoto]=useState(false);
   const act=ACTIVITES.find(a=>a.id===activite);
+
+  function handlePhotoChange(e){
+    const file=e.target.files[0];
+    if(!file) return;
+    setPhotoFile(file);
+    const reader=new FileReader();
+    reader.onload=ev=>setPhotoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  }
 
   function demarrer(){setEnCours(true);setTemps(0);const t=setInterval(()=>setTemps(prev=>prev+1),1000);setTimerRef(t);}
   function arreter(){clearInterval(timerRef);setEnCours(false);setPhase("fin");}
@@ -844,20 +867,34 @@ function LibreTab({p,PAL,Card,CH,ST,Toggle,INP}){
   function vitesse(){if(!distance||!temps||temps===0)return null;const d=parseFloat(distance);const h=temps/3600;if(act?.id==="natation")return null;return(d/h).toFixed(1);}
   function calories(){if(!temps)return 0;const met=act?.id==="velo"?8:act?.id==="natation"?7:act?.id==="marche"?4:9;const poids=parseInt(p.parentPoids)||75;return Math.round(met*poids*(temps/3600));}
   async function publier(){
+    setUploadingPhoto(true);
+    let photoUrl=null;
+    if(photoFile){
+      const ext=photoFile.name.split('.').pop();
+      const path=`posts/${Date.now()}.${ext}`;
+      const {error:upErr}=await supabase.storage.from('duosport-media').upload(path,photoFile,{upsert:true});
+      if(!upErr){
+        const {data}=supabase.storage.from('duosport-media').getPublicUrl(path);
+        photoUrl=data.publicUrl;
+      }
+    }
     const newPost={
       auteur:`${p.parentPrenom||"Vous"} & ${p.enfantPrenom||"Votre enfant"}`,
       avatar:p.relation?.includes("mere")?"👩‍👦":"👨‍👦",
       activite,icon:act?.icon,
       desc:`${distance||"—"} ${act?.unit} en ${fmt(temps)}`,
       details:vitesse()?`${vitesse()} km/h · ${calories()} kcal`:`${calories()} kcal`,
-      lieu:lieu||"Votre ville",photo:"🌳",
+      lieu:lieu||"Votre ville",
+      photo:photoUrl||"🌳",
+      photo_url:photoUrl||null,
       likes:0,note
     };
     try {
       await supabase.from("duosport_posts").insert(newPost);
     } catch(e){}
+    setUploadingPhoto(false);
     setHistorique(prev=>[{...newPost,id:Date.now(),temps:"À l'instant"},...prev]);
-    setPhase("bravo");setDistance("");setNote("");setLieu("");
+    setPhase("bravo");setDistance("");setNote("");setLieu("");setPhotoFile(null);setPhotoPreview(null);
   }
 
   return(<div>
@@ -881,7 +918,7 @@ function LibreTab({p,PAL,Card,CH,ST,Toggle,INP}){
           </div>
           <div style={{marginBottom:14}}><label style={{fontSize:10,color:PAL.gray,letterSpacing:1,textTransform:"uppercase",marginBottom:5,display:"block"}}>Lieu (optionnel)</label><input style={INP} value={lieu} onChange={e=>setLieu(e.target.value)} placeholder="Parc, bords de rivière..."/></div>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><Toggle icon="🌍" label="Partager dans la communauté" col={PAL.grass} active={partager} onClick={()=>setPartager(v=>!v)}/></div>
-          <button onClick={()=>{setPhase("tracking");demarrer();}} style={{width:"100%",background:`linear-gradient(135deg,${act?.col},${act?.col}bb)`,color:"#fff",border:"none",borderRadius:14,padding:"16px",fontSize:18,fontFamily:"'Fredoka One', cursive",cursor:"pointer",boxShadow:`0 6px 24px ${act?.col}55`,letterSpacing:1}}>▶ Démarrer la sortie !</button>
+          <button onClick={()=>{setPhase("tracking");demarrer();}} style={{width:"100%",background:`linear-gradient(135deg,${act?.col},${act?.col}bb)`,color:"#fff",border:"none",borderRadius:14,padding:"16px",fontSize:15,fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,cursor:"pointer",boxShadow:`0 6px 24px ${act?.col}55`}}>▶ Démarrer la sortie !</button>
         </div>
       </Card>}
 
@@ -928,10 +965,33 @@ function LibreTab({p,PAL,Card,CH,ST,Toggle,INP}){
           {vitesse()&&<div style={{textAlign:"center",marginTop:14,paddingTop:14,borderTop:`1px solid ${PAL.navyLL}`}}><div style={{fontFamily:"'Fredoka One', cursive",fontSize:22,color:PAL.sun}}>{vitesse()} km/h</div><div style={{fontSize:10,color:PAL.gray,letterSpacing:1,textTransform:"uppercase",marginTop:3}}>Vitesse moyenne</div></div>}
         </div>
         <div style={{marginBottom:14}}><label style={{fontSize:10,color:PAL.gray,letterSpacing:1,textTransform:"uppercase",marginBottom:6,display:"block"}}>💬 Une note sur cette sortie (optionnel)</label><textarea style={{...INP,height:70,resize:"none"}} value={note} onChange={e=>setNote(e.target.value)} placeholder={`Super sortie avec ${p.enfantPrenom||"mon enfant"} !`}/></div>
+
+        {/* PHOTO */}
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:10,color:PAL.gray,letterSpacing:1,textTransform:"uppercase",marginBottom:6,display:"block"}}>📷 Photo de la sortie (optionnel)</label>
+          {photoPreview?(
+            <div style={{position:"relative",borderRadius:14,overflow:"hidden",marginBottom:8}}>
+              <img src={photoPreview} alt="preview" style={{width:"100%",height:180,objectFit:"cover",display:"block"}}/>
+              <button onClick={()=>{setPhotoFile(null);setPhotoPreview(null);}} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.6)",border:"none",borderRadius:"50%",width:28,height:28,color:"#fff",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+          ):(
+            <label style={{display:"flex",alignItems:"center",gap:10,background:"#1E2540",border:"1.5px dashed #ffffff22",borderRadius:14,padding:"14px 16px",cursor:"pointer"}}>
+              <input type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={handlePhotoChange}/>
+              <span style={{fontSize:24}}>📷</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:500,color:PAL.white}}>Ajouter une photo</div>
+                <div style={{fontSize:11,color:PAL.gray,marginTop:2}}>Prendre une photo ou choisir dans la galerie</div>
+              </div>
+            </label>
+          )}
+        </div>
+
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><Toggle icon="🌍" label="Partager dans la communauté DuoSport" col={PAL.grass} active={partager} onClick={()=>setPartager(v=>!v)}/></div>
         <div style={{display:"flex",gap:10}}>
-          <button onClick={publier} style={{flex:1,background:`linear-gradient(135deg,${PAL.grass},${PAL.sky})`,color:"#fff",border:"none",borderRadius:14,padding:"15px",fontSize:16,fontFamily:"'Fredoka One', cursive",cursor:"pointer",boxShadow:`0 4px 20px ${PAL.grass}44`,letterSpacing:1}}>✅ Enregistrer{partager?" & Partager":""}</button>
-          <button onClick={()=>{setPhase("choix");setTemps(0);setDistance("");}} style={{background:PAL.navyL,color:PAL.gray,border:`1px solid ${PAL.navyLL}`,borderRadius:14,padding:"15px 18px",fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
+          <button onClick={publier} disabled={uploadingPhoto} style={{flex:1,background:uploadingPhoto?"#1E2540":`linear-gradient(135deg,${PAL.grass},${PAL.sky})`,color:"#fff",border:"none",borderRadius:14,padding:"15px",fontSize:15,fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,cursor:"pointer",boxShadow:uploadingPhoto?"none":`0 4px 20px ${PAL.grass}44`,opacity:uploadingPhoto?.7:1}}>
+            {uploadingPhoto?"⏳ Upload photo...":("✅ Enregistrer"+(partager?" & Partager":""))}
+          </button>
+          <button onClick={()=>{setPhase("choix");setTemps(0);setDistance("");setPhotoFile(null);setPhotoPreview(null);}} style={{background:"#1E2540",color:PAL.gray,border:"1px solid #ffffff0f",borderRadius:14,padding:"15px 18px",fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
         </div>
       </div>
     </Card>}
@@ -986,7 +1046,11 @@ function PostCard({post,p,PAL,onLike,isLiked,onComment,commentaire,setCommentair
       <div style={{fontSize:12,color:PAL.gray}}>{post.details}</div>
       {post.note&&<div style={{fontSize:13,color:PAL.offW,marginTop:8,paddingTop:8,borderTop:`1px solid ${PAL.navyLL}`,fontStyle:"italic"}}>"{post.note}"</div>}
     </div>
-    <div style={{margin:"0 18px 14px",background:`linear-gradient(135deg,${(actData?.col||PAL.grass)}18,${PAL.navyLL})`,borderRadius:12,padding:"20px",textAlign:"center",fontSize:48}}>{post.photo||"🌳"}</div>
+    {post.photo_url?(
+      <img src={post.photo_url} alt="sortie" style={{width:"calc(100% - 36px)",margin:"0 18px 14px",height:200,objectFit:"cover",display:"block",borderRadius:12}}/>
+    ):(
+      <div style={{margin:"0 18px 14px",background:`linear-gradient(135deg,${(actData?.col||PAL.grass)}18,${PAL.navyLL})`,borderRadius:12,padding:"20px",textAlign:"center",fontSize:48}}>{post.photo||"🌳"}</div>
+    )}
     <div style={{padding:"0 18px 14px",display:"flex",alignItems:"center",gap:12}}>
       <button onClick={()=>onLike(post.id)} style={{background:isLiked?PAL.coral+"22":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:10,transition:"all .15s"}}>
         <span style={{fontSize:18}}>{isLiked?"❤️":"🤍"}</span>
@@ -1344,12 +1408,14 @@ export default function FitFamilyApp(){
   },[]);
 
   // ── APP STATE ───────────────────────────────────────────
-  const [tab,setTab]=useState("profil");
+  const [tab,setTab]=useState("accueil");
   const [semCourante,setSemCourante]=useState(0);
   const [semaines,setSemaines]=useState([]);
   const [prog,setProg]=useState(false);
   const [profilSaved,setProfilSaved]=useState(false);
   const [savingProfil,setSavingProfil]=useState(false);
+  const [avatarUrl,setAvatarUrl]=useState(null);
+  const [uploadingAvatar,setUploadingAvatar]=useState(false);
   const [p,setP]=useState({
     relation:"pere_fils",
     enfantPrenom:"",enfantAge:"",enfantSexe:"garcon",enfantPoids:"",enfantTaille:"",
@@ -1392,6 +1458,7 @@ export default function FitFamilyApp(){
         style:data.style||prev.style,
         duree:data.duree||prev.duree,
       }));
+      if(data.avatar_url) setAvatarUrl(data.avatar_url);
       setProfilSaved(true);
     }
     loadProfil();
@@ -1419,6 +1486,7 @@ export default function FitFamilyApp(){
       parent_pathos:JSON.stringify(p.parentPathos),
       style:p.style,
       duree:p.duree,
+      avatar_url:avatarUrl||null,
     };
     const {data:existing}=await supabase
       .from("duosport_profils")
@@ -1433,6 +1501,19 @@ export default function FitFamilyApp(){
     }
     setSavingProfil(false);
     setProfilSaved(true);
+  }
+
+  async function uploadAvatar(file){
+    if(!user||!file) return;
+    setUploadingAvatar(true);
+    const ext=file.name.split('.').pop();
+    const path=`avatars/${user.id}.${ext}`;
+    const {error}=await supabase.storage.from('duosport-media').upload(path,file,{upsert:true});
+    if(!error){
+      const {data}=supabase.storage.from('duosport-media').getPublicUrl(path);
+      setAvatarUrl(data.publicUrl);
+    }
+    setUploadingAvatar(false);
   }
 
   function set(k,v){setP(prev=>({...prev,[k]:v}));}
@@ -1452,9 +1533,9 @@ export default function FitFamilyApp(){
   const [burgerOpen,setBurgerOpen]=useState(false);
 
   if(authLoading)return(
-    <div style={{background:"#1A1F3C",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
-      <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet"/>
-      <div style={{fontFamily:"'Fredoka One', cursive",fontSize:42,letterSpacing:2}}><span style={{color:"#FFD93D"}}>DUO</span><span style={{color:"#3DDC84"}}>SPORT</span></div>
+    <div style={{background:"#0F1320",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
+      <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@900&display=swap" rel="stylesheet"/>
+      <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:900,fontSize:42,letterSpacing:-1}}><span style={{color:"#FFD93D"}}>DUO</span><span style={{color:"#3DDC84"}}>SPORT</span></div>
       <div style={{color:"#8892B0",fontSize:13}}>Chargement...</div>
     </div>
   );
@@ -1474,46 +1555,31 @@ export default function FitFamilyApp(){
   function marquer(i){setSemaines(prev=>prev.map((s,j)=>j===i?{...s,complete:true}:s));}
 
   const BOTTOM_TABS=[
+    {id:"accueil",   label:"Accueil",   icon:"🏠"},
     {id:"programme", label:"Entraîner", icon:"🎯"},
     {id:"libre",     label:"Libre",     icon:"⏱️"},
     {id:"communaute",label:"Communauté",icon:"🌍"},
   ];
 
   const BURGER_ITEMS=[
-    {id:"profil",    label:"👤 Profils"},
+    {id:"accueil",   label:"🏠 Accueil"},
+    {id:"profil",    label:"👤 Mon profil"},
     {id:"solo",      label:"💪 Séance Solo"},
     {id:"nutrition", label:"🥗 Nutrition"},
-    {id:"trophees",  label:`🏆 Trophées${tropheesOk.length>0?` (${tropheesOk.length})`:""}`},
+    {id:"trophees",  label:`🏆 Trophées${tropheesOk.length>0?" ("+tropheesOk.length+")":""}`},
   ];
 
 
-  return(<div style={{background:P.navy,minHeight:"100vh",color:P.white,fontFamily:"'DM Sans',sans-serif"}}>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+  return(<div style={{background:"#0F1320",minHeight:"100vh",color:P.white,fontFamily:"'DM Sans',sans-serif"}}>
+    <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 
-    {/* HERO */}
-    <div style={{background:`linear-gradient(135deg,#1A1F3C,#242947,#1A1F3C)`,padding:"28px 20px 22px",textAlign:"center",borderBottom:`2px solid ${P.navyLL}`,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-40,left:-40,width:160,height:160,borderRadius:"50%",background:P.grass+"18",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",top:-20,right:-30,width:120,height:120,borderRadius:"50%",background:P.sky+"18",pointerEvents:"none"}}/>
-      <div style={{fontSize:10,letterSpacing:4,color:P.grass,marginBottom:8,textTransform:"uppercase"}}>Application entraînement</div>
-      <div style={{fontFamily:"'Fredoka One', cursive",fontSize:54,lineHeight:1,letterSpacing:2}}>
-        <span style={{color:P.sun}}>FIT</span><span style={{color:P.grass}}>FAMILY</span><span style={{fontSize:36}}> {rel.icons}</span>
-      </div>
-      <div style={{color:P.gray,fontSize:12,marginTop:8,letterSpacing:1}}>
-        {prog?`${rel.label} · ${p.duree} semaines · ${sportObj?.label}`:"Entraînement · Nutrition · Trophées"}
-      </div>
-      {prog&&<div style={{display:"flex",justifyContent:"center",gap:20,marginTop:16,flexWrap:"wrap"}}>
-        {[{v:`${semComp}/${p.duree}`,l:"Semaines",c:P.sun},{v:tropheesOk.length,l:"Trophées",c:P.coral},{v:`${Math.round((semComp/Math.max(p.duree,1))*100)}%`,l:"Progression",c:P.grass}].map((s,i)=>(
-          <div key={i} style={{textAlign:"center"}}><div style={{fontFamily:"'Fredoka One', cursive",fontSize:30,color:s.c,lineHeight:1}}>{s.v}</div><div style={{fontSize:9,color:P.gray,letterSpacing:1,textTransform:"uppercase",marginTop:2}}>{s.l}</div></div>
-        ))}
-      </div>}
-    </div>
-    {prog&&<div style={{height:4,background:P.navyLL}}><div style={{height:"100%",background:`linear-gradient(90deg,${P.grass},${P.sky})`,width:`${(semComp/p.duree)*100}%`,transition:"width .4s"}}/></div>}
+
 
     {/* BURGER MENU OVERLAY */}
     {burgerOpen&&<div onClick={()=>setBurgerOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:200,display:"flex",alignItems:"flex-start",justifyContent:"flex-end"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:P.navyL,width:260,minHeight:"100vh",padding:"24px 0",boxShadow:"-4px 0 30px #00000060"}}>
         <div style={{padding:"0 20px 20px",borderBottom:`1px solid ${P.navyLL}`,marginBottom:8}}>
-          <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22}}><span style={{color:P.sun}}>FIT</span><span style={{color:P.grass}}>FAMILY</span></div>
+          <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:900,fontSize:22,letterSpacing:-0.5}}><span style={{color:P.sun}}>DUO</span><span style={{color:P.grass}}>SPORT</span></div>
           <div style={{color:P.gray,fontSize:12,marginTop:2}}>{rel.icons} {p.enfantPrenom||"Votre duo"}</div>
         </div>
         {BURGER_ITEMS.map(item=>(
@@ -1536,19 +1602,153 @@ export default function FitFamilyApp(){
     </div>}
 
     {/* NAV HEADER */}
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:P.navyL,borderBottom:`1px solid ${P.navyLL}`,position:"sticky",top:0,zIndex:100}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"#161C2E",borderBottom:"1px solid #ffffff0f",position:"sticky",top:0,zIndex:100}}>
       <button onClick={()=>setBurgerOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:"6px",display:"flex",flexDirection:"column",gap:5}}>
-        <div style={{width:22,height:2,background:P.offW,borderRadius:1}}/>
-        <div style={{width:22,height:2,background:P.offW,borderRadius:1}}/>
-        <div style={{width:16,height:2,background:P.offW,borderRadius:1}}/>
+        <div style={{width:20,height:2,background:P.offW,borderRadius:1}}/>
+        <div style={{width:20,height:2,background:P.offW,borderRadius:1}}/>
+        <div style={{width:14,height:2,background:P.offW,borderRadius:1}}/>
       </button>
-      <div style={{fontFamily:"'Fredoka One', cursive",fontSize:22}}><span style={{color:P.sun}}>FIT</span><span style={{color:P.grass}}>FAMILY</span></div>
-      <div style={{width:34,height:34,borderRadius:"50%",background:P.grass+"22",border:`2px solid ${P.grass}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
-        {rel.icons}
-      </div>
+      <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:900,fontSize:22,letterSpacing:-0.5}}><span style={{color:P.sun}}>DUO</span><span style={{color:P.grass}}>SPORT</span></div>
+      <label style={{width:38,height:38,borderRadius:"50%",background:`linear-gradient(135deg,${P.grass},${P.sky})`,border:`2px solid ${P.grass}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,cursor:"pointer",boxShadow:`0 0 0 3px ${P.grass}22`,position:"relative",overflow:"hidden",flexShrink:0}}>
+        <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files[0]&&uploadAvatar(e.target.files[0])}/>
+        {uploadingAvatar?<span style={{fontSize:11,color:"#fff"}}>...</span>:avatarUrl?<img src={avatarUrl} alt="avatar" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>:<span>{rel.icons}</span>}
+        <div style={{position:"absolute",bottom:1,right:1,width:9,height:9,background:P.grass,borderRadius:"50%",border:"2px solid #161C2E"}}/>
+      </label>
     </div>
 
     <div style={{maxWidth:820,margin:"0 auto",padding:"22px 14px 90px"}}>
+
+      {/* DASHBOARD ACCUEIL */}
+      {tab==="accueil"&&<div style={{paddingBottom:8}}>
+        {/* GREETING */}
+        <div style={{padding:"20px 18px 8px"}}>
+          <div style={{fontSize:11,color:P.gray,letterSpacing:1.5,textTransform:"uppercase",marginBottom:4}}>Bonjour 👋</div>
+          <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:800,fontSize:28,letterSpacing:-0.5}}>
+            {p.parentPrenom||"Mon"} <span style={{color:P.sun}}>&</span> {p.enfantPrenom||"Duo"}
+          </div>
+          {semComp>0&&<div style={{display:"inline-flex",alignItems:"center",gap:6,background:P.coral+"18",border:`1px solid ${P.coral}44`,borderRadius:20,padding:"5px 12px",marginTop:8,fontSize:12,fontWeight:500,color:P.coral}}>
+            🔥 {semComp} semaine{semComp>1?"s":""} de suite
+          </div>}
+        </div>
+
+        {/* STATS */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,padding:"12px 18px"}}>
+          {[
+            {val:`${semComp}/${p.duree}`,lbl:"Semaines",col:P.sun},
+            {val:tropheesOk.length,lbl:"Trophées",col:P.coral},
+            {val:`${Math.round((semComp/Math.max(p.duree,1))*100)}%`,lbl:"Progression",col:P.grass},
+          ].map((s,i)=>(
+            <div key={i} style={{background:"#1E2540",border:"1px solid #ffffff0f",borderRadius:16,padding:"14px 12px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:s.col}}/>
+              <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:800,fontSize:24,color:s.col,lineHeight:1}}>{s.val}</div>
+              <div style={{fontSize:10,color:P.gray,marginTop:4,letterSpacing:.5}}>{s.lbl}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* PROCHAINE SÉANCE */}
+        <div style={{padding:"8px 18px 10px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:16}}>📅 Prochaine séance</div>
+          {prog&&<button onClick={()=>setTab("programme")} style={{background:"none",border:"none",color:P.gray,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Semaine {semCourante+1} →</button>}
+        </div>
+        <div style={{margin:"0 18px",background:"#1E2540",border:"1px solid #ffffff0f",borderRadius:20,overflow:"hidden"}}>
+          {prog?(
+            <>
+              <div style={{padding:"16px 18px 12px",background:`linear-gradient(135deg,${P.grass}18,${P.sky}0a)`,borderBottom:"1px solid #ffffff0f",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <div style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:P.grass,fontWeight:600,marginBottom:4}}>{sportObj?.icon} {sportObj?.label} · Semaine {semCourante+1}</div>
+                  <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:800,fontSize:20}}>Séance A</div>
+                  <div style={{fontSize:12,color:P.gray,marginTop:3}}>Cardio · Technique · Jeux duo</div>
+                </div>
+                <div style={{fontSize:36}}>🎯</div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,padding:14}}>
+                <button onClick={()=>setTab("programme")} style={{background:`linear-gradient(135deg,${P.grass},#2BC870)`,border:"none",borderRadius:14,padding:"14px 10px",color:"#fff",fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,boxShadow:`0 4px 20px ${P.grass}33`}}>
+                  <span>🤝 En duo</span>
+                  <span style={{fontSize:10,fontWeight:400,opacity:.8}}>Avec {p.enfantPrenom||"l'enfant"}</span>
+                </button>
+                <button onClick={()=>setTab("solo")} style={{background:"#161C2E",border:"1.5px solid #ffffff0f",borderRadius:14,padding:"14px 10px",color:P.offW,fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                  <span>💪 Solo</span>
+                  <span style={{fontSize:10,fontWeight:400,opacity:.6}}>Parent seul</span>
+                </button>
+              </div>
+            </>
+          ):(
+            <div style={{padding:"24px 18px",textAlign:"center"}}>
+              <div style={{fontSize:36,marginBottom:10}}>⚙️</div>
+              <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:16,marginBottom:8}}>Aucun programme actif</div>
+              <div style={{color:P.gray,fontSize:13,marginBottom:16}}>Configure ton duo pour générer ton programme</div>
+              <button onClick={()=>setTab("profil")} style={{background:P.grass,color:"#fff",border:"none",borderRadius:12,padding:"12px 24px",fontSize:14,fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,cursor:"pointer"}}>Configurer →</button>
+            </div>
+          )}
+        </div>
+
+        {/* KM PROGRESSION */}
+        <div style={{padding:"18px 18px 10px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:16}}>🏃 Course & marche</div>
+        </div>
+        <div style={{margin:"0 18px",background:"#1E2540",border:"1px solid #ffffff0f",borderRadius:20,padding:18}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div>
+              <div style={{fontSize:11,color:P.gray,marginBottom:2}}>Ce mois-ci</div>
+              <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:800,fontSize:22,color:P.sky}}>
+                {semComp*3.2 > 0 ? (semComp*3.2).toFixed(1) : "0"} <span style={{fontSize:13,fontWeight:400,color:P.gray}}>km / 50 km</span>
+              </div>
+            </div>
+            <div style={{fontSize:28}}>{semComp>=10?"🥇":semComp>=5?"🥈":semComp>=2?"🥉":"🎯"}</div>
+          </div>
+          <div style={{height:8,background:"#0F1320",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+            <div style={{height:"100%",borderRadius:4,background:`linear-gradient(90deg,${P.sky},${P.grass})`,width:`${Math.min((semComp*3.2/50)*100,100)}%`,transition:"width .5s"}}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:P.gray}}>
+            <span>0 km</span>
+            <span style={{color:P.sky,fontWeight:600}}>{Math.min(Math.round((semComp*3.2/50)*100),100)}% — encore {Math.max(50-semComp*3.2,0).toFixed(1)} km</span>
+            <span>50 km</span>
+          </div>
+        </div>
+
+        {/* ACCÈS RAPIDE */}
+        <div style={{padding:"18px 18px 10px"}}>
+          <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:16}}>⚡ Accès rapide</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,padding:"0 18px"}}>
+          {[
+            {icon:"🥗",title:"Nutrition",sub:"Repas du jour",col:P.orange,tab:"nutrition"},
+            {icon:"🏆",title:"Trophées",sub:`${tropheesOk.length} débloqué${tropheesOk.length>1?"s":""}`,col:P.purple,tab:"trophees"},
+            {icon:"🌍",title:"Communauté",sub:"Fil des sorties",col:P.sky,tab:"communaute"},
+            {icon:"⏱️",title:"Sortie libre",sub:"Chrono · Course",col:P.coral,tab:"libre"},
+          ].map((q,i)=>(
+            <button key={i} onClick={()=>setTab(q.tab)} style={{background:"#1E2540",border:"1px solid #ffffff0f",borderRadius:18,padding:16,cursor:"pointer",textAlign:"left",fontFamily:"inherit",position:"relative",overflow:"hidden",transition:"transform .15s"}}>
+              <div style={{position:"absolute",bottom:-20,right:-20,width:70,height:70,borderRadius:"50%",background:q.col,opacity:.08}}/>
+              <div style={{fontSize:26,marginBottom:8}}>{q.icon}</div>
+              <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:14,color:P.white,marginBottom:3}}>{q.title}</div>
+              <div style={{fontSize:11,color:P.gray,lineHeight:1.4}}>{q.sub}</div>
+              <div style={{display:"inline-block",fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:6,marginTop:6,background:q.col+"22",color:q.col}}>Ouvrir →</div>
+            </button>
+          ))}
+        </div>
+
+        {/* TROPHÉES SCROLL */}
+        <div style={{padding:"18px 18px 10px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:700,fontSize:16}}>🏅 Trophées</div>
+          <button onClick={()=>setTab("trophees")} style={{background:"none",border:"none",color:P.gray,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Tous →</button>
+        </div>
+        <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 18px",scrollbarWidth:"none"}}>
+          {TROPHEES.filter(t=>t.s<=p.duree).map(t=>{
+            const ok=t.s<=semComp;
+            return(
+              <div key={t.s} style={{flexShrink:0,background:"#1E2540",border:`1px solid ${ok?P.sun+"44":"#ffffff0f"}`,borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:8,minWidth:140,background:ok?P.sun+"0a":"#1E2540"}}>
+                <div style={{fontSize:22,filter:ok?"none":"grayscale(1)",opacity:ok?1:.4}}>{t.icon}</div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color:ok?P.sun:P.gray,opacity:ok?1:.6}}>{t.label}</div>
+                  <div style={{fontSize:10,color:P.gray,marginTop:1}}>{ok?"✓ Débloqué":`Sem. ${t.s}`}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{height:16}}/>
+      </div>}
 
       {/* PROFILS */}
       {tab==="profil"&&<div>
@@ -1813,11 +2013,11 @@ export default function FitFamilyApp(){
 
     </div>
     {/* BARRE BAS */}
-    <div style={{position:"fixed",bottom:0,left:0,right:0,background:P.navyL,borderTop:`1px solid ${P.navyLL}`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
+    <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#161C2E",borderTop:"1px solid #ffffff0f",display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
       {BOTTOM_TABS.map(t=>(
-        <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:"none",border:"none",padding:"12px 8px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,borderTop:tab===t.id?`3px solid ${P.grass}`:"3px solid transparent"}}>
-          <span style={{fontSize:22}}>{t.icon}</span>
-          <span style={{fontSize:10,fontFamily:"'Fredoka One', cursive",color:tab===t.id?P.grass:P.gray,letterSpacing:.5}}>{t.label}</span>
+        <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:"none",border:"none",padding:"12px 8px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,borderTop:tab===t.id?`2.5px solid ${P.grass}`:"2.5px solid transparent",transition:"all .15s"}}>
+          <span style={{fontSize:20}}>{t.icon}</span>
+          <span style={{fontSize:10,fontFamily:"'Cabinet Grotesk',sans-serif",fontWeight:600,color:tab===t.id?P.grass:P.gray,letterSpacing:.3}}>{t.label}</span>
         </button>
       ))}
     </div>
